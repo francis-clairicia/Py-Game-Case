@@ -111,12 +111,18 @@ class Window(object):
             Window.__fps_obj = Text(color=BLUE)
 
     @staticmethod
-    def init_pygame(size: Tuple[int, int], flags: int, nb_joystick: int, resources: Optional[Resources]) -> None:
+    def init_pygame(size: Tuple[int, int], flags: int, nb_joystick: int, resources: Optional[Resources], config: Optional[str]) -> None:
         if not pygame.get_init():
             pygame.mixer.pre_init(Window.MIXER_FREQUENCY, Window.MIXER_SIZE, Window.MIXER_CHANNELS, Window.MIXER_BUFFER)
             status = pygame.init()
             if status[1] > 0:
                 sys.exit("Error on pygame initialization ({} modules failed to load)".format(status[1]))
+            if isinstance(config, str):
+                head, tail = os.path.split(config)
+                if tail:
+                    Window.__config_file = config
+                    if head and not os.path.isdir(head):
+                        os.makedirs(head)
             Window.load_config()
             Window.__joystick.set(nb_joystick)
             Window.__default_event_binding()
@@ -214,6 +220,7 @@ class Window(object):
         self.on_start_loop()
         while self.__loop:
             self.__main_clock.tick(Window.__fps)
+            self.handle_bg_music()
             for callback in tuple(filter(lambda window_callback: window_callback.can_call(), self.__callback_after)):
                 callback()
                 self.__callback_after.remove(callback)
@@ -222,7 +229,6 @@ class Window(object):
             self.update()
             self.draw_and_refresh()
             self.event_handler()
-            self.handle_bg_music()
         return 0
 
     def stop(self, force=False, sound=None) -> None:
@@ -552,6 +558,7 @@ class Window(object):
     @staticmethod
     def set_sound_volume(value: float) -> None:
         Window.__sound_volume = set_value_in_range(value, 0, 1)
+        Window.__resources.set_sfx_volume(Window.__sound_volume, Window.__enable_sound)
 
     @staticmethod
     def set_music_volume(value: float) -> None:
@@ -693,9 +700,9 @@ class Window(object):
 
 class MainWindow(Window):
 
-    def __init__(self, size=(0, 0), flags=0, bg_color=BLACK, bg_music=None, nb_joystick=0, resources=None):
+    def __init__(self, size=(0, 0), flags=0, bg_color=BLACK, bg_music=None, nb_joystick=0, resources=None, config=None):
         if size[0] <= 0 or size[1] <= 0:
             video_info = pygame.display.Info()
             size = video_info.current_w, video_info.current_h
-        Window.init_pygame(tuple(size), flags, nb_joystick, resources)
+        Window.init_pygame(tuple(size), flags, nb_joystick, resources, config)
         super().__init__(bg_color=bg_color, bg_music=bg_music)

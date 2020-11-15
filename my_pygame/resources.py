@@ -60,7 +60,10 @@ class ResourcesLoader:
 
     def update(self, resource_dict: Dict[str, Any]) -> None:
         self.__files.update(resource_dict)
-        self.__not_loaded.update(resource_dict.copy())
+        if callable(self.__resources_loader):
+            self.__not_loaded.update(resource_dict.copy())
+        else:
+            self.__loaded.update(resource_dict.copy())
 
     def __contains__(self, key: Any) -> bool:
         return key in self.__loaded
@@ -109,7 +112,7 @@ class Resources:
             volume = 0
         elif volume > 1:
             volume = 1
-        for key_path in find_in_iterable(self.__sfx, valid_callback=lambda obj: isinstance(obj, pygame.mixer.Sound)):
+        for key_path in find_in_iterable(self.__sfx.loaded, valid_callback=lambda obj: isinstance(obj, pygame.mixer.Sound)):
             sound_obj = self.get_sfx(*key_path)
             sound_obj.set_volume(volume if bool(state) is True else 0)
 

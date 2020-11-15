@@ -14,8 +14,8 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
     def __init__(self, master: Window, text=str(), font=None, img=None, compound="left",
                  shadow=False, shadow_x=0, shadow_y=0, shadow_color=BLACK,
                  callback: Optional[Callable[..., Any]] = None, state="normal",
-                 size=None, x_add_size=20, y_add_size=20, outline=2, outline_color=BLACK,
-                 bg=GRAY_LIGHT, fg=BLACK,
+                 size=None, x_add_size=20, y_add_size=20,
+                 bg=GRAY_LIGHT, fg=BLACK, outline=2, outline_color=BLACK,
                  hover_bg=WHITE, hover_fg=None, hover_sound=None,
                  active_bg=GRAY, active_fg=None, on_click_sound=None,
                  disabled_bg=GRAY_DARK, disabled_fg=BLACK, disabled_sound=None,
@@ -24,17 +24,19 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
                  hover_img=None, active_img=None, disabled_img=None,
                  disabled_hover_img=None, disabled_active_img=None,
                  highlight_color=BLUE, highlight_thickness=2,
-                 offset=(0, 0), hover_offset=(0, 0), active_offset=(0, 0),
+                 justify=("center", "center"), offset=(0, 0), hover_offset=(0, 0), active_offset=(0, 0),
                  theme=None, **kwargs):
         self.__text = Text(
             text, font=font, color=fg, justify=Text.T_CENTER, img=img, compound=compound,
             shadow=shadow, shadow_x=shadow_x, shadow_y=shadow_y, shadow_color=shadow_color
         )
+        self.__justify_x = {"left": "left", "right": "right", "center": "centerx"}[justify[0]]
+        self.__justify_y = {"top": "top", "bottom": "bottom", "center": "centery"}[justify[1]]
         self.__offset = offset
         self.__text_hover_offset = hover_offset
         self.__text_active_offset = active_offset
-        self.__x_add_size = x_add_size
-        self.__y_add_size = y_add_size
+        self.__x_add_size = round(x_add_size)
+        self.__y_add_size = round(y_add_size)
         self.__custom_size = None
         if not isinstance(size, (list, tuple)) or len(size) != 2:
             size = (self.__text.w + self.__x_add_size, self.__text.h + self.__y_add_size)
@@ -114,7 +116,7 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
 
     def focus_drawing(self, surface: pygame.Surface) -> None:
         Clickable.focus_drawing(self, surface)
-        self.__text.move(center=self.center)
+        self.__text.move(**{self.__justify_x: getattr(self, self.__justify_x), self.__justify_y: getattr(self, self.__justify_y)})
         self.__text.move_ip(*self.__offset)
         if self.hover:
             self.__text.move_ip(*self.__text_hover_offset)
@@ -150,7 +152,7 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
     def on_active_unset(self) -> None:
         self.__set_color("normal")
 
-class ImageButton(Button, use_parent_theme=False):
+class ImageButton(Button):
 
     def __init__(self, master: Window,
                  img: pygame.Surface,
@@ -168,9 +170,27 @@ class ImageButton(Button, use_parent_theme=False):
             ("disabled_active_img", disabled_active_img)
         ]
         images = dict()
+        images["img"] = Image(img, size=size, width=width, height=height, rotate=rotate)
         for image_key, image_surface in filter(lambda image: isinstance(image[1], pygame.Surface), surfaces):
             images[image_key] = Image(image_surface, size=size, width=width, height=height, rotate=rotate)
-        Button.__init__(
-            self, master, bg=TRANSPARENT, hover_bg=TRANSPARENT, active_bg=TRANSPARENT, disabled_bg=TRANSPARENT, outline=0,
-            img=Image(img, size=size, width=width, height=height, rotate=rotate), **images, **kwargs
-        )
+        Button.__init__(self, master, **images, **kwargs)
+
+ImageButton.set_default_theme("__default_theme")
+ImageButton.set_theme("__default_theme", {
+    "bg": TRANSPARENT,
+    "hover_bg": TRANSPARENT,
+    "active_bg": TRANSPARENT,
+    "disabled_bg": TRANSPARENT,
+    "outline": 0,
+    "x_add_size": 20,
+    "y_add_size": 20,
+    "border_radius": 0,
+    "border_top_left_radius": -1,
+    "border_top_right_radius": -1,
+    "border_bottom_left_radius": -1,
+    "border_bottom_right_radius": -1,
+    "justify": ("center", "center"),
+    "offset": (0, 0),
+    "hover_offset": (0, 0),
+    "active_offset": (0, 3)
+})

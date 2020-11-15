@@ -44,3 +44,7 @@ def change_saturation(color: Color, value: int) -> Color:
         S = 0
     c.hsva = (H, S, V, A)
     return c
+
+def set_color_alpha(color: Color, value: int) -> Color:
+    color = Color(color)
+    return Color(color.r, color.g, color.b, value)

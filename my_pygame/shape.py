@@ -5,6 +5,8 @@ import pygame
 from pygame.math import Vector2
 from .drawable import Drawable
 from .colors import TRANSPARENT, BLACK
+from .surface import create_surface
+from .gradients import horizontal
 
 class Shape(Drawable, use_parent_theme=False):
 
@@ -21,6 +23,7 @@ class Shape(Drawable, use_parent_theme=False):
     @color.setter
     def color(self, value: pygame.Color) -> None:
         self.__color = pygame.Color(value) if value is not None else TRANSPARENT
+        self.shape_update()
 
     @property
     def outline(self) -> int:
@@ -49,13 +52,16 @@ class Shape(Drawable, use_parent_theme=False):
     def set_height(self, height: float, smooth=True) -> None:
         Drawable.set_height(self, height, smooth=False)
 
+    def shape_update(self) -> None:
+        pass
+
 class PolygonShape(Shape):
 
     def __init__(self, color: pygame.Color, outline=0, outline_color=BLACK, points=list(), theme=None):
-        Shape.__init__(self, color=color, outline=outline, outline_color=outline_color)
         self.__points = list()
         self.__image_points = list()
         self.__image_points_percent = list()
+        Shape.__init__(self, color=color, outline=outline, outline_color=outline_color)
         self.points = points
 
     @property
@@ -76,9 +82,9 @@ class PolygonShape(Shape):
             ((point.x / self.width if self.width != 0 else 0), (point.y / self.height if self.height != 0 else 0))
             for point in self.__image_points
         ]
+        self.shape_update()
 
-    def before_drawing(self, surface: pygame.Surface) -> None:
-        self.image.fill(TRANSPARENT)
+    def shape_update(self) -> None:
         if len(self.points) > 2:
             pygame.draw.polygon(self.image, self.color, self.__image_points)
         self.mask_update()
@@ -127,8 +133,6 @@ class RectangleShape(Shape):
     def __init__(self, width: int, height: int, color: pygame.Color, outline=0, outline_color=BLACK,
                  border_radius=0, border_top_left_radius=-1, border_top_right_radius=-1,
                  border_bottom_left_radius=-1, border_bottom_right_radius=-1, theme=None):
-        Shape.__init__(self, color=color, outline=outline, outline_color=outline_color)
-        Shape.set_size(self, width, height)
         self.__draw_params = {
             "border_radius": border_radius,
             "border_top_left_radius": border_top_left_radius,
@@ -136,9 +140,12 @@ class RectangleShape(Shape):
             "border_bottom_left_radius": border_bottom_left_radius,
             "border_bottom_right_radius": border_bottom_right_radius
         }
+        Shape.__init__(self, color=color, outline=outline, outline_color=outline_color)
+        Shape.set_size(self, width, height)
+        self.shape_update()
 
-    def before_drawing(self, surface: pygame.Surface) -> None:
-        self.image.fill(TRANSPARENT)
+    def shape_update(self) -> None:
+        self.image = create_surface(self.size)
         pygame.draw.rect(self.image, self.color, self.image.get_rect(), **self.__draw_params)
         self.mask_update()
 
@@ -152,6 +159,18 @@ class RectangleShape(Shape):
     def config(self, **kwargs) -> None:
         for key, value in filter(lambda key, value: key in self.__draw_params, kwargs.items()):
             self.__draw_params[key] = int(value)
+
+    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
+        Shape.set_size(self, *size, smooth=smooth)
+        self.shape_update()
+
+    def set_width(self, width: float, smooth=True)-> None:
+        Shape.set_width(self, width, smooth=smooth)
+        self.shape_update()
+
+    def set_height(self, height: float, smooth=True) -> None:
+        Shape.set_height(self, height, smooth=smooth)
+        self.shape_update()
 
     border_radius = property(
         lambda self: self.__draw_params["border_radius"],
@@ -179,14 +198,15 @@ class CircleShape(Shape):
     def __init__(self, radius: int, color: pygame.Color, outline=0, outline_color=BLACK,
                  draw_top_left=True, draw_top_right=True,
                  draw_bottom_left=True, draw_bottom_right=True, theme=None):
-        Shape.__init__(self, color=color, outline=outline, outline_color=outline_color)
-        self.radius = radius
+        self.__radius = 0
         self.__draw_params = {
             "draw_top_left": draw_top_left,
             "draw_top_right": draw_top_right,
             "draw_bottom_left": draw_bottom_left,
             "draw_bottom_right": draw_bottom_right
         }
+        Shape.__init__(self, color=color, outline=outline, outline_color=outline_color)
+        self.radius = radius
 
     @property
     def radius(self) -> int:
@@ -198,9 +218,10 @@ class CircleShape(Shape):
         if self.__radius < 0:
             self.__radius = 0
         Shape.set_size(self, self.__radius * 2)
+        self.shape_update()
 
-    def before_drawing(self, surface: pygame.Surface) -> None:
-        self.image.fill(TRANSPARENT)
+    def shape_update(self) -> None:
+        self.image = create_surface(self.size)
         pygame.draw.circle(self.image, self.color, (self.radius, self.radius), self.radius, **self.__draw_params)
         self.mask_update()
 
@@ -228,7 +249,8 @@ class CircleShape(Shape):
         self.__update_on_resize()
 
     def __update_on_resize(self) -> None:
-        self.radius = self.width / 2
+        self.__radius = self.width // 2
+        self.shape_update()
 
     draw_top_left = property(
         lambda self: self.__draw_params["draw_top_left"],
@@ -246,3 +268,49 @@ class CircleShape(Shape):
         lambda self: self.__draw_params["draw_bottom_right"],
         lambda self, value: self.config(draw_bottom_right=value)
     )
+
+class HorizontalGradientShape(Drawable, use_parent_theme=False):
+
+    def __init__(self, width: int, height: int, left_color: pygame.Color, right_color: pygame.Color):
+        Drawable.__init__(self)
+        self.__left_color = TRANSPARENT
+        self.__right_color = TRANSPARENT
+        self.left_color = left_color
+        self.right_color = right_color
+        self.set_size(width, height)
+
+    @property
+    def left_color(self) -> pygame.Color:
+        return self.__left_color
+
+    @left_color.setter
+    def left_color(self, color: pygame.Color) -> None:
+        self.__left_color = pygame.Color(color)
+        self.__update_image()
+
+    @property
+    def right_color(self) -> pygame.Color:
+        return self.__right_color
+
+    @right_color.setter
+    def right_color(self, color: pygame.Color) -> None:
+        self.__right_color = pygame.Color(color)
+        self.__update_image()
+
+    def __update_image(self) -> None:
+        if self.w > 0 and self.h > 0:
+            start_color = (self.left_color.r, self.left_color.g, self.left_color.b, self.left_color.a)
+            end_color = (self.right_color.r, self.right_color.g, self.right_color.b, self.right_color.a)
+            self.image = horizontal(self.size, start_color, end_color)
+
+    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
+        Drawable.set_size(self, *size, smooth=False)
+        self.__update_image()
+
+    def set_width(self, width: float, smooth=True)-> None:
+        Drawable.set_width(self, width, smooth=False)
+        self.__update_image()
+
+    def set_height(self, height: float, smooth=True) -> None:
+        Drawable.set_height(self, height, smooth=False)
+        self.__update_image()

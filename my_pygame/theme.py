@@ -31,16 +31,6 @@ class MetaThemedObject(type):
         kwargs = cls.get_theme_options(*default_theme, *theme, **kwargs)
         return type.__call__(cls, *args, **kwargs)
 
-    def get_theme_options(cls, *themes: str, **kwargs) -> Dict[str, Any]:
-        theme_kwargs = dict()
-        for t in themes:
-            if cls not in _CLASSES_NOT_USING_PARENT_THEMES:
-                for class_ in reversed(list(get_all_parent_class(cls, do_not_search_for=_CLASSES_NOT_USING_PARENT_THEMES))):
-                    theme_kwargs.update(_THEMES.get(class_, dict()).get(t, dict()))
-            theme_kwargs.update(_THEMES.get(cls, dict()).get(t, dict()))
-        theme_kwargs.update(kwargs)
-        return theme_kwargs
-
 class ThemedObject(object, metaclass=MetaThemedObject):
 
     def __init_subclass__(cls, use_parent_theme=True, use_parent_default_theme=True, **kwargs) -> None:
@@ -65,6 +55,24 @@ class ThemedObject(object, metaclass=MetaThemedObject):
     @classmethod
     def set_default_theme(cls, name: Union[str, Sequence[str], None]) -> None:
         if name is None:
-            _DEFAULT_THEME.pop(cls, None)
+            if cls in _DEFAULT_THEME and any(default_theme.startswith("__") for default_theme in _DEFAULT_THEME[cls]):
+                _DEFAULT_THEME[cls] = list(filter(lambda theme: theme.startswith("__"), _DEFAULT_THEME[cls]))
+            else:
+                _DEFAULT_THEME.pop(cls, None)
         else:
-            _DEFAULT_THEME[cls] = [name] if isinstance(name, str) else list(name)
+            name = [name] if isinstance(name, str) else list(name)
+            if cls not in _DEFAULT_THEME or all(not default_theme.startswith("__") for default_theme in _DEFAULT_THEME[cls]):
+                _DEFAULT_THEME[cls] = name
+            else:
+                _DEFAULT_THEME[cls] += name
+
+    @classmethod
+    def get_theme_options(cls, *themes: str, **kwargs) -> Dict[str, Any]:
+        theme_kwargs = dict()
+        for t in themes:
+            if cls not in _CLASSES_NOT_USING_PARENT_THEMES:
+                for class_ in reversed(list(get_all_parent_class(cls, do_not_search_for=_CLASSES_NOT_USING_PARENT_THEMES))):
+                    theme_kwargs.update(_THEMES.get(class_, dict()).get(t, dict()))
+            theme_kwargs.update(_THEMES.get(cls, dict()).get(t, dict()))
+        theme_kwargs.update(kwargs)
+        return theme_kwargs

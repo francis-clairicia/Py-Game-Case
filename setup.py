@@ -48,9 +48,9 @@ args = parser.parse_args()
 
 application = "py_game_case"
 
-dependencies = ["pygame", "my_pygame"]
+dependencies = ["pygame", "my_pygame", "navy", "four_in_a_row"]
 
-additional_files = []
+additional_files = ["resources"]
 
 executable_infos = {
     "project_name": "Py-Game-Case",
@@ -62,7 +62,7 @@ executable_infos = {
             "script": "run.pyw",
             "name": "Launcher",
             "base": "Win32GUI",
-            "icon": None
+            "icon": "resources/py_game_case/img/icon.ico"
         }
     ],
     "copyright": "Copyright (c) 2020 Francis Clairicia-Rose-Claire-Josephine"

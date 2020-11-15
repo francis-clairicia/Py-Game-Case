@@ -14,6 +14,7 @@ class Sprite(Drawable, use_parent_theme=False):
         Drawable.__init__(self)
         self.__sprites = dict()
         self.__sprite_list = list()
+        self.__sprite_list_name = str()
         self.__nb_sprites = 0
         self.__sprite_idx = 0
         self.__clock = Clock()
@@ -27,6 +28,9 @@ class Sprite(Drawable, use_parent_theme=False):
     def get_actual_sprite_list(self) -> List[Image]:
         return self.__sprite_list
 
+    def get_actual_sprite_list_name(self) -> str:
+        return self.__sprite_list_name
+
     def get_sprite_list(self, name: str) -> List[Image]:
         return self.__sprites.get(str(name), list())
 
@@ -34,12 +38,7 @@ class Sprite(Drawable, use_parent_theme=False):
         return list(itertools.chain.from_iterable(self.__sprites.values()))
 
     def add_sprite(self, name: str, img: pygame.Surface, set_sprite=False, **kwargs) -> None:
-        if not isinstance(img, pygame.Surface):
-            return
-        name = str(name)
-        self.__sprites[name] = [Image(img, **kwargs)]
-        if set_sprite:
-            self.set_sprite_list(name)
+        self.add_sprite_list(name, [img], set_sprite_list=set_sprite, **kwargs)
 
     def add_sprite_list(self, name: str, img_list: List[pygame.Surface], set_sprite_list=False, **kwargs) -> None:
         if not img_list or any(not isinstance(obj, pygame.Surface) for obj in img_list):
@@ -48,7 +47,7 @@ class Sprite(Drawable, use_parent_theme=False):
         self.__sprites[name] = sprite_list = list()
         for surface in img_list:
             sprite_list.append(Image(surface, **kwargs))
-        if set_sprite_list:
+        if set_sprite_list or self.__nb_sprites == 0:
             self.set_sprite_list(name)
 
     def add_spritesheet(self, name: str, img: pygame.Surface, rect_list: List[pygame.Rect], set_sprite_list=False, **kwargs) -> None:
@@ -56,14 +55,19 @@ class Sprite(Drawable, use_parent_theme=False):
             return
         self.add_sprite_list(name, [img.subsurface(rect) for rect in rect_list], set_sprite_list=set_sprite_list, **kwargs)
 
+    def set_sprite(self, name: str) -> None:
+        self.set_sprite_list(name)
+
     def set_sprite_list(self, name: str) -> None:
         self.__sprite_list = self.get_sprite_list(name)
         self.__nb_sprites = len(self.__sprite_list)
         self.__sprite_idx = 0
         if self.__nb_sprites > 0:
             self.image = self.__sprite_list[0]
+            self.__sprite_list_name = str(name)
         else:
             self.image = create_surface((0, 0))
+            self.__sprite_list_name = str()
 
     def resize_sprite_list(self, name: str, **kwargs) -> None:
         for sprite in self.get_sprite_list(name):
