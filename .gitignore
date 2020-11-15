@@ -3,6 +3,13 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# my_pygame files
+joystick.bin
+window.ini
+
+#Visual Studio code workspace settings
+.vscode
+
 # C extensions
 *.so
 
