@@ -111,7 +111,7 @@ class Window(object):
             Window.__fps_obj = Text(color=BLUE)
 
     @staticmethod
-    def init_pygame(size: Tuple[int, int], flags: int, nb_joystick: int, resources: Optional[Resources], config: Optional[str]) -> None:
+    def _init_pygame(size: Tuple[int, int], flags: int, nb_joystick: int, resources: Optional[Resources], config: Optional[str]) -> None:
         if not pygame.get_init():
             pygame.mixer.pre_init(Window.MIXER_FREQUENCY, Window.MIXER_SIZE, Window.MIXER_CHANNELS, Window.MIXER_BUFFER)
             status = pygame.init()
@@ -218,7 +218,7 @@ class Window(object):
         self.set_grid()
         self.fps_update()
         self.on_start_loop()
-        first_frame = True
+        pygame.event.pump()
         while self.__loop:
             self.__main_clock.tick(Window.__fps)
             self.handle_bg_music()
@@ -229,8 +229,7 @@ class Window(object):
             self.keyboard.update()
             self.update()
             self.draw_and_refresh()
-            self.event_handler(first_frame)
-            first_frame = False
+            self.event_handler()
         self.__callback_after.clear()
         return 0
 
@@ -281,9 +280,11 @@ class Window(object):
     def refresh(self, rect=None) -> None:
         pygame.display.update(rect or self.rect_to_update or self.rect)
 
-    def draw_and_refresh(self, show_fps=True, rect=None) -> None:
+    def draw_and_refresh(self, show_fps=True, rect=None, pump=False) -> None:
         self.draw_screen(show_fps=show_fps)
         self.refresh(rect=rect)
+        if pump:
+            pygame.event.pump()
 
     @staticmethod
     def set_fps(framerate: int) -> None:
@@ -321,7 +322,7 @@ class Window(object):
         for obj in filter(lambda obj: obj not in without, self.objects):
             obj.hide()
 
-    def event_handler(self, first_frame: bool) -> None:
+    def event_handler(self) -> None:
         for key_state_dict in [Window.__all_window_key_state_dict, self.__key_state_dict]:
             for key_value, callback_list in key_state_dict.items():
                 for callback in callback_list:
@@ -338,8 +339,6 @@ class Window(object):
             if event.type == pygame.QUIT \
             or (event.type == pygame.KEYDOWN and event.key == pygame.K_F4 and (event.mod & pygame.KMOD_LALT)):
                 self.stop(force=True)
-            if first_frame and event.type in [pygame.MOUSEMOTION]:
-                continue
             for event_handler_dict in [Window.__all_window_event_handler_dict, self.__event_handler_dict]:
                 for callback in event_handler_dict.get(event.type, tuple()):
                     callback(event)
@@ -379,6 +378,10 @@ class Window(object):
 
     def remove_focus(self, obj: Focusable) -> None:
         self.objects.remove_focus(obj)
+
+    def focus_mode(self, mode: str) -> None:
+        if mode in Focusable.ALL_MODES:
+            Focusable.MODE = mode
 
     def handle_focus(self, event: pygame.event.Event) -> None:
         if event.type in [pygame.KEYDOWN, pygame.JOYHATMOTION]:
@@ -709,5 +712,5 @@ class MainWindow(Window):
         if size[0] <= 0 or size[1] <= 0:
             video_info = pygame.display.Info()
             size = video_info.current_w, video_info.current_h
-        Window.init_pygame(tuple(size), flags, nb_joystick, resources, config)
+        Window._init_pygame(tuple(size), flags, nb_joystick, resources, config)
         super().__init__(bg_color=bg_color, bg_music=bg_music)

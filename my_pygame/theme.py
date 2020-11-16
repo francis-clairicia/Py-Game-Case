@@ -64,7 +64,7 @@ class ThemedObject(object, metaclass=MetaThemedObject):
             if cls not in _DEFAULT_THEME or all(not default_theme.startswith("__") for default_theme in _DEFAULT_THEME[cls]):
                 _DEFAULT_THEME[cls] = name
             else:
-                _DEFAULT_THEME[cls] += name
+                _DEFAULT_THEME[cls] = list(filter(lambda theme: theme.startswith("__"), _DEFAULT_THEME[cls])) + name
 
     @classmethod
     def get_theme_options(cls, *themes: str, **kwargs) -> Dict[str, Any]:

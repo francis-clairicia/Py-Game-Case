@@ -8,7 +8,8 @@ class Focusable:
     MODE_MOUSE = "mouse"
     MODE_KEY = "keyboard"
     MODE_JOY = "joystick"
-    MODE = MODE_KEY
+    MODE = MODE_MOUSE
+    ALL_MODES = [MODE_MOUSE, MODE_KEY, MODE_JOY]
     ON_LEFT = "on_left"
     ON_RIGHT = "on_right"
     ON_TOP = "on_top"
@@ -22,6 +23,7 @@ class Focusable:
         self.__master = master
         self.__highlight_color = pygame.Color(highlight_color)
         self.__highlight_thickness = highlight_thickness
+        self.__force_use_highlight_thickness = False
 
     @property
     def focus(self) -> bool:
@@ -56,14 +58,20 @@ class Focusable:
         if not self.has_focus():
             return
         if hasattr(self, "rect"):
-            outline = getattr(self, "outline", self.__highlight_thickness)
-            if outline <= 0:
+            if not self.__force_use_highlight_thickness:
+                outline = getattr(self, "outline", self.__highlight_thickness)
+                if outline <= 0:
+                    outline = self.__highlight_thickness
+            else:
                 outline = self.__highlight_thickness
             if outline > 0:
                 getattr(self, "focus_drawing_function", self.__default_focus_drawing_func)(surface, self.__highlight_color, outline)
 
     def __default_focus_drawing_func(self, surface: pygame.Surface, highlight_color: pygame.Color, highlight_thickness: int) -> None:
         pygame.draw.rect(surface, highlight_color, getattr(self, "rect"), width=highlight_thickness)
+
+    def force_use_highlight_thickness(self, status: bool) -> None:
+        self.__force_use_highlight_thickness = bool(status)
 
     def has_focus(self) -> bool:
         return self.__focus

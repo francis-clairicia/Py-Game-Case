@@ -6,8 +6,9 @@ from typing import Callable
 import pygame
 from my_pygame import MainWindow, Window, Image, Button, Sprite, RectangleShape, HorizontalGradientShape
 from my_pygame import ButtonListVertical, DrawableListHorizontal
-from my_pygame import TRANSPARENT, WHITE, BLACK
-from my_pygame import set_color_alpha
+from my_pygame import Clickable
+from my_pygame import TRANSPARENT, WHITE, BLACK, YELLOW
+from my_pygame import set_color_alpha, change_brightness
 from .constants import RESOURCES, GAMES
 
 class TitleButton(Button):
@@ -29,12 +30,26 @@ class TitleButton(Button):
         super().on_hover()
         self.__on_hover()
 
+class SettingsButton(Button):
+
+    @property
+    def color(self) -> pygame.Color:
+        return TRANSPARENT
+
+    @color.setter
+    def color(self, color: pygame.Color) -> None:
+        self.outline_color = color
+
+    def after_drawing(self, surface: pygame.Surface) -> None:
+        pygame.draw.line(surface, self.outline_color, self.topleft, self.topright, width=self.outline)
+        pygame.draw.line(surface, self.outline_color, self.midleft, self.midright, width=self.outline)
+        pygame.draw.line(surface, self.outline_color, self.bottomleft, self.bottomright, width=self.outline)
+
 class AnimationStart(Window):
 
     def __init__(self, master):
         Window.__init__(self, master=master)
         self.master = master
-        self.bg = RectangleShape(self.w, self.h, BLACK)
 
     def mainloop(self) -> int:
         milliseconds = 10
@@ -49,7 +64,7 @@ class AnimationStart(Window):
 class PyGameCase(MainWindow):
 
     def __init__(self):
-        super().__init__(size=(1280, 720), resources=RESOURCES)
+        super().__init__(size=(1280, 720), bg_color=(0, 0, 100), resources=RESOURCES)
         self.set_title("Py-Game-Case")
         self.set_icon(RESOURCES.IMG["icon"])
 
@@ -70,6 +85,15 @@ class PyGameCase(MainWindow):
             "hover_offset": (0, -5),
             "active_offset": (0, 10)
         })
+        SettingsButton.set_default_theme("default")
+        SettingsButton.set_theme("default", {
+            "bg": WHITE,
+            "hover_bg": YELLOW,
+            "active_bg": change_brightness(YELLOW, -75),
+            "outline": 7,
+            "outline_color": WHITE,
+            "highlight_thickness": 0
+        })
 
         self.image_game_preview = Sprite()
         self.bg = DrawableListHorizontal()
@@ -82,9 +106,9 @@ class PyGameCase(MainWindow):
         )
         self.logo = Image(RESOURCES.IMG["logo"], width=self.bg[0].width)
 
-        self.buttons = ButtonListVertical(offset=30)
+        self.buttons_game_launch = ButtonListVertical(offset=30)
         for game_id, game_name in GAMES.items():
-            self.buttons.add(TitleButton(
+            self.buttons_game_launch.add(TitleButton(
                 self, lambda game=game_id: self.show_preview(game), text=game_name,
                 callback=lambda game=game_id: self.launch_game(game)
             ))
@@ -93,27 +117,46 @@ class PyGameCase(MainWindow):
         self.game_launched_processes = list()
 
         self.animation_start = AnimationStart(self)
+        self.button_settings = SettingsButton(self, size=40)
+        self.button_settings.force_use_highlight_thickness(True)
 
     def place_objects(self) -> None:
         self.logo.move(left=10, top=10)
-        self.buttons.move(left=10, top=self.logo.bottom + 50)
-        self.image_game_preview.move(center=self.center)
+        self.buttons_game_launch.move(left=10, top=self.logo.bottom + 50)
+        self.image_game_preview.center = self.center
+        self.button_settings.move(right=self.right - 20, top=20)
+
+    def set_grid(self) -> None:
+        self.button_settings.set_obj_on_side(on_bottom=self.buttons_game_launch[0], on_left=self.buttons_game_launch[0])
+        self.buttons_game_launch.set_obj_on_side(on_top=self.button_settings, on_right=self.button_settings)
 
     def on_start_loop(self):
-        self.image_game_preview.move(right=self.left)
+        self.image_game_preview.right = self.left
+        save_button_game_center = list()
+        for button in self.buttons_game_launch:
+            save_button_game_center.append(button.center)
+        self.buttons_game_launch.right = self.left
+        for obj in [self.logo, self.button_settings]:
+            obj.hide()
         self.animation_start.mainloop()
-        self.buttons[0].focus_set()
+        self.logo.show()
+        for button, center in zip(self.buttons_game_launch, save_button_game_center):
+            button.animate_move(self, 10, speed=20, center=center)
+        self.show_all()
 
     def update(self) -> None:
         for process in list(filter(lambda process: process.poll() is not None, self.game_launched_processes)):
             self.game_launched_processes.remove(process)
+        if all(not button.has_focus() and not button.hover for button in self.buttons_game_launch) and self.image_game_preview.right != self.left:
+            self.image_game_preview.animate_move(self, 10, speed=75, right=self.left)
+            self.game_id = None
 
     def show_preview(self, game_id: str) -> None:
         if self.game_id == game_id:
             return
         self.game_id = game_id
-        milliseconds = 1
-        speed = 50
+        milliseconds = 5
+        speed = 75
         self.image_game_preview.animate_move(self, milliseconds, speed=speed, right=self.left)
         self.image_game_preview.set_sprite(self.game_id)
         self.image_game_preview.animate_move(self, milliseconds, speed=speed, center=self.center)

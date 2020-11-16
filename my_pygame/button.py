@@ -38,9 +38,10 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
         self.__x_add_size = round(x_add_size)
         self.__y_add_size = round(y_add_size)
         self.__custom_size = None
-        if not isinstance(size, (list, tuple)) or len(size) != 2:
+        if size is None:
             size = (self.__text.w + self.__x_add_size, self.__text.h + self.__y_add_size)
         else:
+            size = (int(size), int(size)) if isinstance(size, (int, float)) else tuple(size)
             self.__custom_size = size
         RectangleShape.__init__(self, *size, color=bg, outline=outline, outline_color=outline_color, **kwargs)
         self.__bg = {

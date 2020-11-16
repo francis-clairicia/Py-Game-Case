@@ -332,7 +332,7 @@ class AnimationMove(AbstractAnimationClass):
             direction.scale_to_length(speed)
             previous_rect = self.drawable.rect
             self.drawable.move_ip(direction.x, direction.y)
-            self.master.draw_and_refresh(rect=[previous_rect, self.drawable.rect])
+            self.master.draw_and_refresh(rect=[previous_rect, self.drawable.rect], pump=True)
             pygame.time.wait(milliseconds)
             direction = Vector2(projection.center) - Vector2(self.drawable.center)
         self.drawable.move(**kwargs)
@@ -359,7 +359,7 @@ class AnimationRotation(AbstractAnimationClass):
                 return
             previous_rect = self.drawable.rect
             actual_rect = self.__rotate(default_surface, default_rect, actual_angle, point)
-            self.master.draw_and_refresh(rect=[previous_rect, actual_rect])
+            self.master.draw_and_refresh(rect=[previous_rect, actual_rect], pump=True)
             pygame.time.wait(milliseconds)
             actual_angle += angle_offset
         self.__rotate(default_surface, default_rect, angle, point)
@@ -395,7 +395,7 @@ class AnimationScaleSize(AbstractAnimationClass):
                 return
             previous_rect = self.drawable.rect
             self.drawable.image = Drawable.surface_resize(default_surface, size=(actual_width, actual_height))
-            self.master.draw_and_refresh(rect=[previous_rect, self.drawable.rect])
+            self.master.draw_and_refresh(rect=[previous_rect, self.drawable.rect], pump=True)
             pygame.time.wait(milliseconds)
             if not_size_set(width, actual_width, width_offset):
                 actual_width += width_offset
@@ -424,7 +424,7 @@ class AnimationScaleWidth(AbstractAnimationClass):
                 return
             previous_rect = self.drawable.rect
             self.drawable.image = Drawable.surface_resize(default_surface, width=actual_width)
-            self.master.draw_and_refresh(rect=[previous_rect, self.drawable.rect])
+            self.master.draw_and_refresh(rect=[previous_rect, self.drawable.rect], pump=True)
             pygame.time.wait(milliseconds)
             actual_width += offset
         self.drawable.image = Drawable.surface_resize(default_surface, width=width)
@@ -450,7 +450,7 @@ class AnimationScaleHeight(AbstractAnimationClass):
                 return
             previous_rect = self.drawable.rect
             self.drawable.image = Drawable.surface_resize(default_surface, height=actual_height)
-            self.master.draw_and_refresh(rect=[previous_rect, self.drawable.rect])
+            self.master.draw_and_refresh(rect=[previous_rect, self.drawable.rect], pump=True)
             pygame.time.wait(milliseconds)
             actual_height += offset
         self.drawable.image = Drawable.surface_resize(default_surface, height=height)
