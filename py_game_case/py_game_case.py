@@ -4,7 +4,7 @@ import sys
 import subprocess
 from typing import Callable
 import pygame
-from my_pygame import MainWindow, Window, Image, Button, Sprite, Animation, RectangleShape, HorizontalGradientShape
+from my_pygame import MainWindow, Window, Image, Button, Sprite, RectangleShape, HorizontalGradientShape
 from my_pygame import ButtonListVertical, DrawableListHorizontal
 from my_pygame import TRANSPARENT, WHITE, BLACK
 from my_pygame import set_color_alpha
@@ -25,8 +25,26 @@ class TitleButton(Button):
         pygame.draw.line(surface, highlight_color, self.bottomleft, self.bottomright, width=highlight_thickness)
 
     def on_hover(self) -> None:
+        self.focus_set()
         super().on_hover()
         self.__on_hover()
+
+class AnimationStart(Window):
+
+    def __init__(self, master):
+        Window.__init__(self, master=master)
+        self.master = master
+        self.bg = RectangleShape(self.w, self.h, BLACK)
+
+    def mainloop(self) -> int:
+        milliseconds = 10
+        self.logo = Image(RESOURCES.IMG["logo"])
+        self.logo.midtop = self.midbottom
+        self.logo.animate_move(self, milliseconds, speed=20, center=self.center)
+        self.logo.animate_rotate(self, milliseconds, angle=360, angle_offset=10)
+        self.logo.animate_resize_width(self, milliseconds, self.master.logo.width, offset=20)
+        self.logo.center = self.center
+        self.logo.animate_move(self, milliseconds, speed=20, left=10, top=10)
 
 class PyGameCase(MainWindow):
 
@@ -71,26 +89,34 @@ class PyGameCase(MainWindow):
                 callback=lambda game=game_id: self.launch_game(game)
             ))
             self.image_game_preview.add_sprite(game_id, RESOURCES.IMG[game_id], size=self.size)
-        self.animation_game_preview = Animation(self, self.image_game_preview)
+        self.game_id = None
         self.game_launched_processes = list()
+
+        self.animation_start = AnimationStart(self)
 
     def place_objects(self) -> None:
         self.logo.move(left=10, top=10)
         self.buttons.move(left=10, top=self.logo.bottom + 50)
+        self.image_game_preview.move(center=self.center)
+
+    def on_start_loop(self):
+        self.image_game_preview.move(right=self.left)
+        self.animation_start.mainloop()
+        self.buttons[0].focus_set()
 
     def update(self) -> None:
         for process in list(filter(lambda process: process.poll() is not None, self.game_launched_processes)):
             self.game_launched_processes.remove(process)
 
     def show_preview(self, game_id: str) -> None:
-        if self.image_game_preview.get_actual_sprite_list_name() == game_id:
-            self.__show_preview(game_id)
-        else:
-            self.animation_game_preview.move(5, speed=50, after_move=lambda: self.__show_preview(game_id), right=self.left)
-
-    def __show_preview(self, game_id: str) -> None:
-        self.image_game_preview.set_sprite(game_id)
-        self.animation_game_preview.move(5, speed=50, center=self.center)
+        if self.game_id == game_id:
+            return
+        self.game_id = game_id
+        milliseconds = 1
+        speed = 50
+        self.image_game_preview.animate_move(self, milliseconds, speed=speed, right=self.left)
+        self.image_game_preview.set_sprite(self.game_id)
+        self.image_game_preview.animate_move(self, milliseconds, speed=speed, center=self.center)
 
     def launch_game(self, game_id: str) -> None:
         if sys.argv[0].endswith((".py", ".pyw")):

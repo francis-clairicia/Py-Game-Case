@@ -218,6 +218,7 @@ class Window(object):
         self.set_grid()
         self.fps_update()
         self.on_start_loop()
+        first_frame = True
         while self.__loop:
             self.__main_clock.tick(Window.__fps)
             self.handle_bg_music()
@@ -228,7 +229,8 @@ class Window(object):
             self.keyboard.update()
             self.update()
             self.draw_and_refresh()
-            self.event_handler()
+            self.event_handler(first_frame)
+            first_frame = False
         self.__callback_after.clear()
         return 0
 
@@ -319,7 +321,7 @@ class Window(object):
         for obj in filter(lambda obj: obj not in without, self.objects):
             obj.hide()
 
-    def event_handler(self) -> None:
+    def event_handler(self, first_frame: bool) -> None:
         for key_state_dict in [Window.__all_window_key_state_dict, self.__key_state_dict]:
             for key_value, callback_list in key_state_dict.items():
                 for callback in callback_list:
@@ -336,6 +338,8 @@ class Window(object):
             if event.type == pygame.QUIT \
             or (event.type == pygame.KEYDOWN and event.key == pygame.K_F4 and (event.mod & pygame.KMOD_LALT)):
                 self.stop(force=True)
+            if first_frame and event.type in [pygame.MOUSEMOTION]:
+                continue
             for event_handler_dict in [Window.__all_window_event_handler_dict, self.__event_handler_dict]:
                 for callback in event_handler_dict.get(event.type, tuple()):
                     callback(event)

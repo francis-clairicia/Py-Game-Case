@@ -8,7 +8,7 @@ class Focusable:
     MODE_MOUSE = "mouse"
     MODE_KEY = "keyboard"
     MODE_JOY = "joystick"
-    MODE = MODE_MOUSE
+    MODE = MODE_KEY
     ON_LEFT = "on_left"
     ON_RIGHT = "on_right"
     ON_TOP = "on_top"
