@@ -258,7 +258,8 @@ class AbstractDrawableListAligned(DrawableList):
         self.__justify = justify_dict[orient][justify]
 
     def __del__(self) -> None:
-        AbstractDrawableListAligned.__trace.remove(self)
+        if self in AbstractDrawableListAligned.__trace:
+            AbstractDrawableListAligned.__trace.remove(self)
 
     @property
     def offset(self) -> int:

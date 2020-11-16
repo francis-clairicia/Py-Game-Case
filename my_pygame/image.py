@@ -13,4 +13,4 @@ class Image(Drawable, use_parent_theme=False):
         return cls(surface=pygame.image.load(filepath).convert_alpha(), **kwargs)
 
     def load(self, surface: pygame.Surface, **kwargs) -> None:
-        self.image = self.resize_surface(surface, **kwargs)
+        self.image = self.surface_resize(surface, **kwargs)

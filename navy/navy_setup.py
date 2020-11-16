@@ -6,7 +6,7 @@ from math import sin, cos
 from typing import Tuple, Sequence, Dict, Any
 import pygame
 from my_pygame import Window
-from my_pygame import Image, ImageButton, Button, RectangleShape, Text
+from my_pygame import Image, ImageButton, Button, RectangleShape, Text, Animation
 from my_pygame import DrawableListHorizontal, DrawableListVertical
 from my_pygame import GREEN, GREEN_DARK, GREEN_LIGHT, WHITE, YELLOW, RED, TRANSPARENT
 from my_pygame import CountDown
@@ -49,6 +49,7 @@ class ShipSetup(Image):
         self.default_center = (0, 0)
         self.center_before_click = (0, 0)
         self.__boxes_covered = list()
+        self.animation = Animation(self.master, self)
         self.master.bind_event(pygame.MOUSEBUTTONDOWN, self.select_event)
         self.master.bind_event(pygame.MOUSEBUTTONUP, self.unselect_event)
         self.master.bind_event(pygame.MOUSEMOTION, self.move_event)
@@ -64,6 +65,15 @@ class ShipSetup(Image):
                 self.rotate(90)
             else:
                 self.rotate(-90)
+            self.__orient = orient
+
+    def animate_orient_set(self, orient: str, first_box: BoxSetup, new_cases: Sequence[BoxSetup]) -> None:
+        if orient in (ShipSetup.VERTICAL, ShipSetup.HORIZONTAL) and orient != self.__orient:
+            after_animation = lambda boxes=[first_box] + new_cases: self.__place_ship(boxes)
+            if orient == ShipSetup.HORIZONTAL:
+                self.animation.rotate(10, 90, point=first_box.center, angle_offset=5, after_move=after_animation)
+            else:
+                self.animation.rotate(10, -90, point=first_box.center, angle_offset=5, after_move=after_animation)
             self.__orient = orient
 
     @property
@@ -87,7 +97,7 @@ class ShipSetup(Image):
         self.boxes_covered.clear()
 
     def select_event(self, event: pygame.event.Event) -> None:
-        if event.type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(event.pos) and not self.animate_move_started():
+        if event.type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(event.pos) and not self.animation.started():
             self.clicked = True
             self.center_before_click = self.center
             self.move_ip(0, -3)
@@ -95,7 +105,7 @@ class ShipSetup(Image):
     def unselect_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEBUTTONUP and self.clicked:
             if (self.on_move and not self.place_ship_on_map()) or (not self.on_move and not self.rotate_ship()):
-                self.animate_move(self.master, 10, speed=30, center=self.center_before_click)
+                self.animation.move(10, speed=30, center=self.center_before_click)
             self.clicked = self.on_move = False
             self.master.remove_boxes_highlight()
 
@@ -128,8 +138,7 @@ class ShipSetup(Image):
             if box is None or (box.ship is not None and box.ship != self):
                 return False
             new_cases.append(box)
-        self.orient = new_orient
-        self.__place_ship([first_box] + new_cases)
+        self.animate_orient_set(new_orient, first_box, new_cases)
         return True
 
     def __place_ship(self, boxes: Sequence[BoxSetup]):

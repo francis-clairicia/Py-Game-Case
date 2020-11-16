@@ -229,6 +229,7 @@ class Window(object):
             self.update()
             self.draw_and_refresh()
             self.event_handler()
+        self.__callback_after.clear()
         return 0
 
     def stop(self, force=False, sound=None) -> None:

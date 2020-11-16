@@ -71,12 +71,12 @@ class Sprite(Drawable, use_parent_theme=False):
 
     def resize_sprite_list(self, name: str, **kwargs) -> None:
         for sprite in self.get_sprite_list(name):
-            sprite.image = sprite.resize_surface(sprite.image, **kwargs)
+            sprite.image = sprite.surface_resize(sprite.image, **kwargs)
 
     def resize_all_sprites(self, **kwargs) -> None:
         for sprite in self.get_all_sprites():
-            sprite.image = sprite.resize_surface(sprite.image, **kwargs)
-        self.image = self.resize_surface(self.image, **kwargs)
+            sprite.image = sprite.surface_resize(sprite.image, **kwargs)
+        self.image = self.surface_resize(self.image, **kwargs)
 
     def set_size(self, *size, smooth=True) -> None:
         pass

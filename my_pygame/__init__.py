@@ -15,6 +15,7 @@ from .checkbox import CheckBox
 from .list import DrawableList, DrawableListHorizontal, DrawableListVertical, ButtonListHorizontal, ButtonListVertical
 from .form import Form
 from .sprite import Sprite
+from .animation import Animation
 from .clock import Clock
 from .count_down import CountDown
 from .colors import *

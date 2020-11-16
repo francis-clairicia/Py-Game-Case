@@ -4,7 +4,7 @@ import sys
 import subprocess
 from typing import Callable
 import pygame
-from my_pygame import MainWindow, Window, Image, Button, Sprite, RectangleShape, HorizontalGradientShape
+from my_pygame import MainWindow, Window, Image, Button, Sprite, Animation, RectangleShape, HorizontalGradientShape
 from my_pygame import ButtonListVertical, DrawableListHorizontal
 from my_pygame import TRANSPARENT, WHITE, BLACK
 from my_pygame import set_color_alpha
@@ -71,7 +71,7 @@ class PyGameCase(MainWindow):
                 callback=lambda game=game_id: self.launch_game(game)
             ))
             self.image_game_preview.add_sprite(game_id, RESOURCES.IMG[game_id], size=self.size)
-        
+        self.animation_game_preview = Animation(self, self.image_game_preview)
         self.game_launched_processes = list()
 
     def place_objects(self) -> None:
@@ -83,24 +83,19 @@ class PyGameCase(MainWindow):
             self.game_launched_processes.remove(process)
 
     def show_preview(self, game_id: str) -> None:
-        self.image_game_preview.animate_move_stop()
         if self.image_game_preview.get_actual_sprite_list_name() == game_id:
             self.__show_preview(game_id)
         else:
-            self.image_game_preview.animate_move(
-                self, 5, speed=50,
-                after_move=lambda: self.__show_preview(game_id),
-                right=self.left
-            )
+            self.animation_game_preview.move(5, speed=50, after_move=lambda: self.__show_preview(game_id), right=self.left)
 
     def __show_preview(self, game_id: str) -> None:
         self.image_game_preview.set_sprite(game_id)
-        self.image_game_preview.animate_move(self, 5, speed=50, center=self.center)
+        self.animation_game_preview.move(5, speed=50, center=self.center)
 
     def launch_game(self, game_id: str) -> None:
-        if sys.argv[0].endswith(".exe"):
-            args = [sys.executable, game_id]
-        else:
+        if sys.argv[0].endswith((".py", ".pyw")):
             args = [sys.executable, sys.argv[0], game_id]
+        else:
+            args = [sys.executable, game_id]
         process = subprocess.Popen(args, shell=False, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.game_launched_processes.append(process)

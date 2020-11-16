@@ -21,18 +21,15 @@ class Drawable(Sprite, ThemedObject):
         self.__rect = pygame.Rect(0, 0, 0, 0)
         self.__x = self.__y = 0
         self.__scale = self.__default_scale
-        self.__angle = 0
         self.__former_moves = dict()
         self.__draw_sprite = True
         self.__valid_size = True
-        self.__animation_started = False
-        self.__animation_params = dict()
-        self.__animation_window_callback = None
-        self.image = self.resize_surface(surface, **kwargs)
+        self.image = self.surface_resize(surface, **kwargs)
         self.rotate(rotate)
 
     def __del__(self) -> None:
-        Drawable.__trace.remove(self)
+        if self in Drawable.__trace:
+            Drawable.__trace.remove(self)
 
     def __getitem__(self, name: str) -> Union[int, Tuple[int, int]]:
         return getattr(self.rect, name)
@@ -96,10 +93,6 @@ class Drawable(Sprite, ThemedObject):
         self.__mask = pygame.mask.from_surface(self.__surface)
 
     @property
-    def angle(self) -> float:
-        return self.__angle
-
-    @property
     def scale(self) -> Tuple[float, float]:
         return self.__scale
 
@@ -152,61 +145,29 @@ class Drawable(Sprite, ThemedObject):
         self.__rect = self.__surface.get_rect(x=self.__x, y=self.__y)
         self.__former_moves = {"x": self.__x, "y": self.__y}
 
-    def animate_move(self, master, milliseconds: float, speed=1, after_move=None, **kwargs) -> None:
-        if milliseconds <= 0 or speed <= 0:
-            self.move(**kwargs)
-        else:
-            self.__animation_started = True
-            self.__animation_params.update(
-                master=master,
-                milliseconds=milliseconds,
-                speed=speed,
-                kwargs=kwargs,
-                after_move=after_move
-            )
-            self.__animate_move(**self.__animation_params)
-
-    def __animate_move(self, master, milliseconds: float, speed: float, kwargs: dict, after_move: Callable[..., Any]) -> None:
-        if not self.__animation_started:
-            return
-        projection = Drawable(self.image)
-        projection.move(**kwargs)
-        direction = Vector2(projection.center) - Vector2(self.center)
-        length = direction.length() - speed
-        if length <= 0:
-            self.move(**kwargs)
-            self.__animation_started = False
-            self.__animation_params.clear()
-            if callable(after_move):
-                after_move()
-        else:
-            direction.scale_to_length(speed)
-            self.move_ip(direction.x, direction.y)
-            self.__animation_window_callback = master.after(milliseconds, lambda: self.__animate_move(**self.__animation_params))
-
-    def animate_move_started(self) -> bool:
-        return self.__animation_started
-
-    def animate_move_stop(self) -> None:
-        self.__animation_started = False
-        if "master" in self.__animation_params:
-            self.__animation_params["master"].remove_window_callback(self.__animation_window_callback)
-
-    def animate_move_restart(self):
-        if not self.__animation_started and self.__animation_params:
-            self.__animation_started = True
-            self.__animate_move(**self.__animation_params)
-
     def rotate(self, angle: float) -> None:
         angle %= 360
-        if angle != 0:
-            self.image = pygame.transform.rotate(self.image, angle)
-            self.__angle = (self.__angle + angle) % 360
-            if self.__angle < 0:
-                self.__angle += 360
+        if angle == 0:
+            return
+        self.image = pygame.transform.rotate(self.__surface_without_scale, angle)
+
+    def rotate_through_point(self, angle: float, point: Union[Tuple[int, int], Vector2]) -> None:
+        angle %= 360
+        if angle == 0:
+            return
+        image, rect = self.surface_rotate(self.__surface_without_scale, self.rect, angle, point)
+        self.image = image
+        self.center = rect.center
+    
+    @staticmethod
+    def surface_rotate(surface: pygame.Surface, rect: pygame.Rect, angle: float, point: Union[Tuple[int, int], Vector2]) -> Tuple[pygame.Surface, pygame.Rect]:
+        offset = Vector2(rect.center) - Vector2(point)
+        rotated_surface = pygame.transform.rotate(surface, angle)
+        rotated_offset = offset.rotate(-angle)
+        return rotated_surface, rotated_surface.get_rect(center=point + rotated_offset)
 
     @staticmethod
-    def resize_surface(surface: pygame.Surface, size: Optional[Union[int, Tuple[int, int]]] = None,
+    def surface_resize(surface: pygame.Surface, size: Optional[Union[int, Tuple[int, int]]] = None,
              width: Optional[int] = None, height: Optional[int] = None,
              min_width: Optional[int] = None, min_height: Optional[int] = None,
              max_width: Optional[int] = None, max_height: Optional[int] = None,
@@ -253,7 +214,7 @@ class Drawable(Sprite, ThemedObject):
     def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
         size = size if len(size) == 2 else size[0]
         try:
-            self.image = self.resize_surface(self.__surface_without_scale, size=size, smooth=smooth)
+            self.image = self.surface_resize(self.__surface_without_scale, size=size, smooth=smooth)
         except pygame.error:
             self.__valid_size = False
         else:
@@ -261,7 +222,7 @@ class Drawable(Sprite, ThemedObject):
 
     def set_width(self, width: float, smooth=True)-> None:
         try:
-            self.image = self.resize_surface(self.__surface_without_scale, width=width, smooth=smooth)
+            self.image = self.surface_resize(self.__surface_without_scale, width=width, smooth=smooth)
         except pygame.error:
             self.__valid_size = False
         else:
@@ -269,7 +230,7 @@ class Drawable(Sprite, ThemedObject):
 
     def set_height(self, height: float, smooth=True) -> None:
         try:
-            self.image = self.resize_surface(self.__surface_without_scale, height=height, smooth=smooth)
+            self.image = self.surface_resize(self.__surface_without_scale, height=height, smooth=smooth)
         except pygame.error:
             self.__valid_size = False
         else:
