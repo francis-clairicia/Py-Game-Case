@@ -218,7 +218,8 @@ class Window(object):
         self.set_grid()
         self.fps_update()
         self.on_start_loop()
-        pygame.event.pump()
+        for event in pygame.event.get():
+            continue
         while self.__loop:
             self.__main_clock.tick(Window.__fps)
             self.handle_bg_music()
