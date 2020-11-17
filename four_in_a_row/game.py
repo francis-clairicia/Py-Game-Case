@@ -186,7 +186,7 @@ class FourInARowGameplay(Window):
         self.left_options = ButtonListVertical(offset=50)
         self.left_options.add(
             Button(self, "Restart", theme="option", callback=self.restart),
-            Button(self, "Quit game", theme="option", callback=lambda: self.stop(force=True))
+            Button(self, "Quit game", theme="option", callback=self.close)
         )
         self.text_winner = Text()
         self.text_drawn_match = Text("Drawn match.")

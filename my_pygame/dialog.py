@@ -18,7 +18,10 @@ class Dialog(Window):
         self.__hide_all_without = list(hide_all_without)
         self.__show_all_without = list(show_all_without)
         self.__hidden_objects_master = list(filter(lambda obj: not obj.is_shown(), self.__master.objects.drawable))
-        self.bind_key(pygame.K_ESCAPE, lambda event: self.stop())
+
+    @property
+    def master(self) -> Window:
+        return self.__master
 
     @property
     def frame(self) -> RectangleShape:

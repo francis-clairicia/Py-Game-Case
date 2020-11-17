@@ -126,6 +126,9 @@ class Window(object):
             Window.load_config()
             Window.__joystick.set(nb_joystick)
             Window.__default_event_binding()
+            if size[0] <= 0 or size[1] <= 0:
+                video_info = pygame.display.Info()
+                size = (video_info.current_w, video_info.current_h)
             surface = pygame.display.set_mode(size, flags)
             Window.__size = surface.get_size()
             Window.__flags = flags
@@ -253,6 +256,9 @@ class Window(object):
             Window.save_config()
             pygame.quit()
 
+    def close(self) -> None:
+        self.stop(force=True)
+
     def on_quit(self) -> None:
         pass
 
@@ -337,9 +343,9 @@ class Window(object):
                     for callback in callback_list:
                         callback(self.joystick[device_index].get_value(action))
         for event in pygame.event.get():
-            if event.type == pygame.QUIT \
-            or (event.type == pygame.KEYDOWN and event.key == pygame.K_F4 and (event.mod & pygame.KMOD_LALT)):
-                self.stop(force=True)
+            if event.type == pygame.QUIT:
+                self.close()
+                break
             for event_handler_dict in [Window.__all_window_event_handler_dict, self.__event_handler_dict]:
                 for callback in event_handler_dict.get(event.type, tuple()):
                     callback(event)
@@ -710,8 +716,5 @@ class Window(object):
 class MainWindow(Window):
 
     def __init__(self, size=(0, 0), flags=0, bg_color=BLACK, bg_music=None, nb_joystick=0, resources=None, config=None):
-        if size[0] <= 0 or size[1] <= 0:
-            video_info = pygame.display.Info()
-            size = video_info.current_w, video_info.current_h
-        Window._init_pygame(tuple(size), flags, nb_joystick, resources, config)
+        Window._init_pygame(size, flags, nb_joystick, resources, config)
         super().__init__(bg_color=bg_color, bg_music=bg_music)
