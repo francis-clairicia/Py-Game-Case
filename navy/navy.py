@@ -148,11 +148,14 @@ class Options(Dialog):
         self.scale_sound.show_value(Scale.S_RIGHT, font=Button.get_theme_options("option")["font"])
         self.button_cancel = Button(self, "Return to menu", theme="option", callback=self.stop)
 
-    def place_objects(self):
+    def place_objects(self) -> None:
         self.text_title.move(centerx=self.frame.centerx, top=self.frame.top + 50)
         self.scale_music.move(centerx=self.frame.centerx, bottom=self.frame.centery - 20)
         self.scale_sound.move(centerx=self.frame.centerx, top=self.frame.centery + 20)
         self.button_cancel.move(centerx=self.frame.centerx, bottom=self.frame.bottom - 10)
+
+    def on_quit(self) -> None:
+        self.save_config()
 
 class NavyWindow(MainWindow):
     def __init__(self):
