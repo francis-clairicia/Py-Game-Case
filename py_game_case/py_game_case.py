@@ -10,6 +10,7 @@ from my_pygame import Clickable
 from my_pygame import TRANSPARENT, WHITE, BLACK, YELLOW
 from my_pygame import set_color_alpha, change_brightness
 from .constants import RESOURCES, GAMES
+from .settings import Settings
 
 class TitleButton(Button):
 
@@ -44,22 +45,6 @@ class SettingsButton(Button):
         pygame.draw.line(surface, self.outline_color, self.topleft, self.topright, width=self.outline)
         pygame.draw.line(surface, self.outline_color, self.midleft, self.midright, width=self.outline)
         pygame.draw.line(surface, self.outline_color, self.bottomleft, self.bottomright, width=self.outline)
-
-class AnimationStart(Window):
-
-    def __init__(self, master):
-        Window.__init__(self, master=master)
-        self.master = master
-
-    def mainloop(self) -> int:
-        milliseconds = 10
-        self.logo = Image(RESOURCES.IMG["logo"])
-        self.logo.midtop = self.midbottom
-        self.logo.animate_move(self, milliseconds, speed=20, center=self.center)
-        self.logo.animate_rotate(self, milliseconds, angle=360, angle_offset=10)
-        self.logo.animate_resize_width(self, milliseconds, self.master.logo.width, offset=20)
-        self.logo.center = self.center
-        self.logo.animate_move(self, milliseconds, speed=20, left=10, top=10)
 
 class PyGameCase(MainWindow):
 
@@ -116,8 +101,9 @@ class PyGameCase(MainWindow):
         self.game_id = None
         self.game_launched_processes = list()
 
-        self.animation_start = AnimationStart(self)
-        self.button_settings = SettingsButton(self, size=40)
+        self.settings_section = Settings(self)
+
+        self.button_settings = SettingsButton(self, size=40, callback=self.settings_section.mainloop)
         self.button_settings.force_use_highlight_thickness(True)
 
     def place_objects(self) -> None:
@@ -138,11 +124,21 @@ class PyGameCase(MainWindow):
         self.buttons_game_launch.right = self.left
         for obj in [self.logo, self.button_settings]:
             obj.hide()
-        self.animation_start.mainloop()
+        milliseconds = 10
+        logo = Image(RESOURCES.IMG["logo"])
+        logo.midtop = self.midbottom
+        self.objects.add(logo)
+        logo.animate_move(self, milliseconds, speed=20, center=self.center)
+        logo.animate_rotate(self, milliseconds, angle=360, angle_offset=10)
+        logo.animate_resize_width(self, milliseconds, self.logo.width, offset=20)
+        logo.center = self.center
+        logo.animate_move(self, milliseconds, speed=20, left=10, top=10)
+        self.objects.remove(logo)
         self.logo.show()
         for button, center in zip(self.buttons_game_launch, save_button_game_center):
-            button.animate_move(self, 10, speed=20, center=center)
+            button.animate_move(self, milliseconds, speed=20, center=center)
         self.show_all()
+        self.focus_mode(Button.MODE_KEY)
 
     def update(self) -> None:
         for process in list(filter(lambda process: process.poll() is not None, self.game_launched_processes)):
