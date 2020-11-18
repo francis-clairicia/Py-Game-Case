@@ -53,12 +53,8 @@ class Updater(tk.Tk):
         self.session = requests.Session()
         self.session.headers = {
             "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "python3-request/py-game-case"
+            "User-Agent": "python-request/py-updater"
         }
-        token_file = os.path.join(sys.path[0], "token")
-        if os.path.isfile(token_file):
-            with open(token_file, "r") as file:
-                self.session.headers["Authorization"] = "token {token}".format(token=file.read())
 
     def __del__(self) -> None:
         self.session.close()
