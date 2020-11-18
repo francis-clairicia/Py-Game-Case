@@ -41,7 +41,8 @@ class Updater(tk.Tk):
         
         self.session = requests.Session()
         self.session.headers = {
-            "Accept": "application/vnd.github.v3+json"
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "python3-request/py-game-case"
         }
         token_file = os.path.join(sys.path[0], "token")
         if os.path.isfile(token_file):
