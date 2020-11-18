@@ -5,6 +5,7 @@ import sys
 import subprocess
 import glob
 import requests
+import packaging.version
 import tkinter as tk
 import tkinter.ttk as ttk
 from tkinter.messagebox import showinfo, showerror
@@ -69,22 +70,33 @@ class Updater(tk.Tk):
             return None
         return response.json()
 
-    def get_latest_version(self) -> dict:
-        return self.__get_release("https://api.github.com/repos/{}/{}/releases/latest".format(Updater.OWNER, Updater.REPOSITORY))
+    def install_latest_version(self, actual_version: str) -> None:
+        url = "https://api.github.com/repos/{}/{}/releases/latest".format(Updater.OWNER, Updater.REPOSITORY)
+        release = self.__get_release(url)
+        if release is not None and packaging.version.parse(release["tag_name"]) > packaging.version.parse(actual_version):
+            self.__install(release)
 
-    def get_version(self, version: str) -> dict:
-        return self.__get_release("https://api.github.com/repos/{}/{}/releases/tags/{}".format(Updater.OWNER, Updater.REPOSITORY, version))
+    def install_version(self, version: str) -> None:
+        try:
+            version = str(packaging.version.Version(version))
+            url = "https://api.github.com/repos/{}/{}/releases/tags/{}".format(Updater.OWNER, Updater.REPOSITORY, version)
+            release = self.__get_release(url)
+            if release is None:
+                raise packaging.version.InvalidVersion(f"There is no version {version}")
+        except packaging.version.InvalidVersion as e:
+            sys.exit(f"{e.__class__.__name__}: {e}")
+        self.__install(release)
 
-    def install(self, release: dict) -> None:
+    def __install(self, release: dict) -> None:
         self.label["text"] = str()
         self.progress["value"] = self.progress["maximum"] = 0
-        self.after(100, lambda: self.__install(release))
+        self.after(100, lambda: self.__start_install(release))
         self.mainloop()
         os.execv(self.executable, [self.executable])
 
     @threaded_function
     @showerror_exception
-    def __install(self, release: dict) -> None:
+    def __start_install(self, release: dict) -> None:
         archive_to_download = self.__search_archive_assets(release)
         if archive_to_download is None:
             showerror("No assets", "There is no assets for this version or not for your platform")

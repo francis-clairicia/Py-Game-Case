@@ -24,18 +24,9 @@ def main():
     updater = Updater()
 
     if args.update:
-        release = updater.get_latest_version()
-        if release is not None and packaging.version.parse(release["tag_name"]) > packaging.version.parse(__version__):
-            updater.install(release)
+        updater.install_latest_version(__version__)
     elif args.install:
-        try:
-            version = packaging.version.Version(args.install)
-            release = updater.get_version(str(version))
-            if release is None:
-                raise packaging.version.InvalidVersion(f"There is no version {version}")
-        except packaging.version.InvalidVersion as e:
-            sys.exit(f"{e.__class__.__name__}: {e}")
-        updater.install(release)
+        updater.install_version(args.install)
 
     if args.game is None:
         MainWindow = PyGameCase
