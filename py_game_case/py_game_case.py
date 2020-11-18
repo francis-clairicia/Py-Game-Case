@@ -107,6 +107,7 @@ class PyGameCase(MainWindow):
         self.button_settings.force_use_highlight_thickness(True)
 
     def place_objects(self) -> None:
+        self.bg.center = self.center
         self.logo.move(left=10, top=10)
         self.buttons_game_launch.move(left=10, top=self.logo.bottom + 50)
         self.image_game_preview.center = self.center
@@ -118,44 +119,41 @@ class PyGameCase(MainWindow):
 
     def on_start_loop(self):
         self.image_game_preview.right = self.left
-        save_button_game_center = list()
-        for button in self.buttons_game_launch:
-            save_button_game_center.append(button.center)
+        save_objects_center = list()
+        for obj in self.objects.drawable:
+            save_objects_center.append(obj.center)
         self.buttons_game_launch.right = self.left
         for obj in [self.logo, self.button_settings]:
             obj.hide()
-        milliseconds = 10
         logo = Image(RESOURCES.IMG["logo"])
         logo.midtop = self.midbottom
         self.objects.add(logo)
-        logo.animate_move(self, milliseconds, speed=20, center=self.center)
-        logo.animate_rotate(self, milliseconds, angle=360, angle_offset=10)
-        logo.animate_resize_width(self, milliseconds, self.logo.width, offset=20)
+        logo.animate_move(self, speed=20, center=self.center)
+        logo.animation.rotate(angle=360, offset=5).scale_width(self.logo.width, offset=7).start(self)
         logo.center = self.center
-        logo.animate_move(self, milliseconds, speed=20, left=10, top=10)
+        logo.animate_move(self, speed=20, left=10, top=10)
         self.objects.remove(logo)
         self.logo.show()
-        for button, center in zip(self.buttons_game_launch, save_button_game_center):
-            button.animate_move(self, milliseconds, speed=20, center=center)
+        for obj, center in zip(self.objects.drawable, save_objects_center):
+            obj.animate_move(self, speed=20, center=center)
         self.show_all()
         self.focus_mode(Button.MODE_KEY)
 
     def update(self) -> None:
         for process in list(filter(lambda process: process.poll() is not None, self.game_launched_processes)):
             self.game_launched_processes.remove(process)
-        if all(not button.has_focus() and not button.hover for button in self.buttons_game_launch) and self.image_game_preview.right != self.left:
-            self.image_game_preview.animate_move(self, 10, speed=75, right=self.left)
+        if all(not button.has_focus() and not button.hover for button in self.buttons_game_launch) and self.game_id is not None:
+            self.image_game_preview.animate_move(self, speed=75, right=self.left)
             self.game_id = None
 
     def show_preview(self, game_id: str) -> None:
         if self.game_id == game_id:
             return
         self.game_id = game_id
-        milliseconds = 5
-        speed = 75
-        self.image_game_preview.animate_move(self, milliseconds, speed=speed, right=self.left)
+        speed = 100
+        self.image_game_preview.animate_move(self, speed=speed, right=self.left)
         self.image_game_preview.set_sprite(self.game_id)
-        self.image_game_preview.animate_move(self, milliseconds, speed=speed, center=self.center)
+        self.image_game_preview.animate_move(self, speed=speed, center=self.center)
 
     def launch_game(self, game_id: str) -> None:
         if sys.argv[0].endswith((".py", ".pyw")):
@@ -164,3 +162,10 @@ class PyGameCase(MainWindow):
             args = [sys.executable, game_id]
         process = subprocess.Popen(args, shell=False, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.game_launched_processes.append(process)
+
+    def close(self) -> None:
+        if self.game_launched_processes:
+            if pygame.display.get_active():
+                pygame.display.iconify()
+        else:
+            self.stop(force=True)

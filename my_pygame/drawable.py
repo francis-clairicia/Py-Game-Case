@@ -1,6 +1,6 @@
 # -*- coding: Utf-8 -*
 
-from typing import Tuple, Optional, Any, Union, Callable, Dict
+from typing import Tuple, Optional, Any, Union, Callable, Dict, Iterator
 import pygame
 from pygame.sprite import Sprite
 from pygame.math import Vector2
@@ -27,6 +27,7 @@ class Drawable(Sprite, ThemedObject):
         self.__valid_size = True
         self.image = self.surface_resize(surface, **kwargs)
         self.rotate(rotate)
+        self.__animation = Animation(self)
 
     def __del__(self) -> None:
         if self in Drawable.__trace:
@@ -36,7 +37,8 @@ class Drawable(Sprite, ThemedObject):
         return getattr(self.rect, name)
 
     def __setitem__(self, name: str, value: Any) -> None:
-        self.move(**{name: value})
+        if hasattr(self.rect, name):
+            setattr(self, name, value)
 
     def fill(self, color: pygame.Color) -> None:
         self.image.fill(color)
@@ -69,16 +71,19 @@ class Drawable(Sprite, ThemedObject):
             surface = surface.image
         elif not isinstance(surface, pygame.Surface):
             surface = create_surface((0, 0))
-        try:
-            scale_w, scale_h = self.__scale
-            width, height = surface.get_size()
-            self.__surface_without_scale = surface
-            self.__surface = pygame.transform.smoothscale(surface, (round(width * scale_w), round(height * scale_h)))
-        except pygame.error:
-            self.__valid_size = False
-            self.__surface = surface
+        self.__surface_without_scale = surface
+        if self.__scale != (1, 1):
+            try:
+                scale_w, scale_h = self.__scale
+                width, height = surface.get_size()
+                self.__surface = pygame.transform.smoothscale(surface, (round(width * scale_w), round(height * scale_h)))
+            except pygame.error:
+                self.__valid_size = False
+                self.__surface = surface
+            else:
+                self.__valid_size = True
         else:
-            self.__valid_size = True
+            self.__surface = surface
         self.__rect = self.__surface.get_rect(**self.__former_moves)
         self.mask_update()
 
@@ -149,9 +154,8 @@ class Drawable(Sprite, ThemedObject):
         self.__rect = self.__surface.get_rect(x=self.__x, y=self.__y)
         self.__former_moves = {"x": self.__x, "y": self.__y}
 
-    def animate_move(self, master, milliseconds: float, speed=1, at_every_frame=None, after_move=None, **kwargs) -> None:
-        animation = AnimationMove(master, self)
-        animation(milliseconds, speed, at_every_frame, after_move, **kwargs)
+    def animate_move(self, master, speed=1, at_every_frame=None, **position) -> None:
+        self.__animation.move(speed=speed, **position).start(master, at_every_frame)
 
     def rotate(self, angle: float) -> None:
         angle %= 360
@@ -167,9 +171,8 @@ class Drawable(Sprite, ThemedObject):
         self.image = image
         self.center = rect.center
 
-    def animate_rotate(self, master, milliseconds: float, angle: float, angle_offset=1, point=None, at_every_frame=None, after_move=None) -> None:
-        animation = AnimationRotation(master, self)
-        animation(milliseconds, angle, angle_offset, point, at_every_frame, after_move)
+    def animate_rotate(self, master, angle: float, offset=1, point=None, at_every_frame=None) -> None:
+        self.__animation.rotate(angle=angle, offset=offset, point=point).start(master, at_every_frame)
     
     @staticmethod
     def surface_rotate(surface: pygame.Surface, rect: pygame.Rect, angle: float, point: Union[Tuple[int, int], Vector2]) -> Tuple[pygame.Surface, pygame.Rect]:
@@ -190,6 +193,8 @@ class Drawable(Sprite, ThemedObject):
             scale_func = pygame.transform.scale
         if not isinstance(surface, pygame.Surface):
             surface = create_surface((0, 0))
+        if all(param is None for param in [size, width, height, min_width, min_height, max_width, max_height]):
+            return surface
         w, h = surface.get_size()
         if isinstance(size, (list, tuple)):
             width, height = size
@@ -248,17 +253,13 @@ class Drawable(Sprite, ThemedObject):
         else:
             self.__valid_size = True
 
-    def animate_resize(self, master, milliseconds: float, width: int, height: int, width_offset=1, height_offset=1, at_every_frame=None, after_move=None) -> None:
-        animation = AnimationScaleSize(master, self)
-        animation(milliseconds, width, height, width_offset, height_offset, at_every_frame, after_move)
+    def animate_resize_width(self, master, width: int, offset=1, at_every_frame=None) -> None:
+        self.__animation.scale_width(width=width, offset=offset).start(master, at_every_frame)
 
-    def animate_resize_width(self, master, milliseconds: float, width: int, offset=1, at_every_frame=None, after_move=None) -> None:
-        animation = AnimationScaleWidth(master, self)
-        animation(milliseconds, width, offset, at_every_frame, after_move)
+    def animate_resize_height(self, master, height: int, offset=1, at_every_frame=None) -> None:
+        self.__animation.scale_height(height=height, offset=offset).start(master, at_every_frame)
 
-    def animate_resize_height(self, master, milliseconds: float, height: int, offset=1, at_every_frame=None, after_move=None) -> None:
-        animation = AnimationScaleHeight(master, self)
-        animation(milliseconds, height, offset, at_every_frame, after_move)
+    animation = property(lambda self: self.__animation)
 
     left = property(lambda self: self.rect.left, lambda self, value: self.move(left=value))
     right = property(lambda self: self.rect.right, lambda self, value: self.move(right=value))
@@ -285,204 +286,170 @@ class Drawable(Sprite, ThemedObject):
 
 class AbstractAnimationClass:
 
-    def __init__(self, master, drawable: Drawable):
-        self.__master = master
+    def __init__(self, drawable: Drawable):
         self.__drawable = drawable
-        self.__animation_started = False
-        self.__thread = None
+        self.__animation_started = True
+
+    def started(self) -> bool:
+        return self.__animation_started
 
     def stop(self) -> None:
         self.__animation_started = False
-        if self.__thread is not None:
-            self.__thread.join()
-            self.__thread = None
+        self.default()
 
-    def started(self) -> bool:
-        return self.__thread is None or self.__animation_started
-
-    def thread_start(self, *args, **kwargs) -> None:
-        self.__thread = self.__thread_call(*args, **kwargs)
-
-    @threaded_function
-    def __thread_call(self, *args, **kwargs) -> None:
-        self.__animation_started = True
-        self.__call__(*args, **kwargs)
-        self.__animation_started = False
-
-    def __call__(self, *args, **kwargs) -> None:
+    def __call__(self) -> None:
         raise NotImplementedError
 
-    master = property(lambda self: self.__master)
+    def default(self) -> None:
+        raise NotImplementedError
+
     drawable = property(lambda self: self.__drawable)
 
 class AnimationMove(AbstractAnimationClass):
 
-    def __call__(self, milliseconds: float, speed=1, at_every_frame=None, after_move=None, **kwargs) -> None:
-        if milliseconds <= 0 or speed <= 0:
-            self.drawable.move(**kwargs)
-            if callable(at_every_frame):
-                at_every_frame()
-            self.master.draw_and_refresh()
-            if callable(after_move):
-                after_move()
+    def __init__(self, drawable: Drawable, speed=1, **position):
+        super().__init__(drawable)
+        self.__position = position
+        self.__speed = speed
+        self.__increment = 0
+
+    def __call__(self) -> None:
+        if self.__speed <= 0:
+            self.stop()
             return
+        self.__increment += 1
+        length = self.__increment * self.__speed
         projection = Drawable(self.drawable.image)
-        projection.move(**kwargs)
+        projection.move(**self.__position)
         direction = Vector2(projection.center) - Vector2(self.drawable.center)
-        while speed < direction.length():
-            if not self.started():
-                return
-            direction.scale_to_length(speed)
+        if direction.length() > 0 and length < direction.length():
+            direction.scale_to_length(length)
             self.drawable.move_ip(direction.x, direction.y)
-            if callable(at_every_frame):
-                at_every_frame()
-            self.master.draw_and_refresh(pump=True)
-            pygame.time.wait(milliseconds)
-            direction = Vector2(projection.center) - Vector2(self.drawable.center)
-        self.drawable.move(**kwargs)
-        if callable(at_every_frame):
-            at_every_frame()
-        self.master.draw_and_refresh()
-        if callable(after_move):
-            after_move()
+        else:
+            self.stop()
+
+    def default(self) -> None:
+        self.drawable.move(**self.__position)
 
 class AnimationRotation(AbstractAnimationClass):
 
-    def __call__(self, milliseconds: float, angle: float, angle_offset=1, point=None, at_every_frame=None, after_move=None) -> None:
-        if point is None:
-            point = self.drawable.center
-        if milliseconds <= 0 or angle == 0 or angle_offset == 0:
-            self.drawable.rotate_through_point(angle, point)
-            if callable(at_every_frame):
-                at_every_frame()
-            self.master.draw_and_refresh()
-            if callable(after_move):
-                after_move()
-            return
-        angle_offset = abs(angle_offset) * (angle / abs(angle))
-        default_surface = self.drawable.image
-        default_rect = self.drawable.rect
-        actual_angle = angle_offset
-        while (angle_offset < 0 and actual_angle > angle) or (angle_offset > 0 and actual_angle < angle):
-            if not self.started():
-                return
-            self.__rotate(default_surface, default_rect, actual_angle, point)
-            if callable(at_every_frame):
-                at_every_frame()
-            self.master.draw_and_refresh(pump=True)
-            pygame.time.wait(milliseconds)
-            actual_angle += angle_offset
-        self.__rotate(default_surface, default_rect, angle, point)
-        if callable(at_every_frame):
-            at_every_frame()
-        self.master.draw_and_refresh()
-        if callable(after_move):
-            after_move()
+    def __init__(self, drawable: Drawable, angle: float, offset=1, point=None):
+        super().__init__(drawable)
+        self.__angle = angle
+        self.__offset = abs(offset) * (angle / abs(angle)) if angle != 0 else 0
+        self.__actual_angle = 0
+        self.__pivot = point
 
-    def __rotate(self, default_surface: pygame.Surface, default_rect: pygame.Rect,
-                 angle: float, point: Union[Tuple[int, int], Vector2]) -> None:
-        image, rect = Drawable.surface_rotate(default_surface, default_rect, angle, point)
-        self.drawable.image = image
-        self.drawable.center = rect.center
+    def __call__(self) -> None:
+        if self.__angle == 0 or self.__offset == 0:
+            self.stop()
+            return
+        self.__actual_angle += self.__offset
+        if (self.__offset < 0 and self.__actual_angle > self.__angle) or (self.__offset > 0 and self.__actual_angle < self.__angle):
+            self.__rotate(self.__actual_angle, self.__pivot)
+        else:
+            self.stop()
+
+    def default(self) -> None:
+        self.__rotate(self.__angle, self.__pivot)
+
+    def __rotate(self, angle: float, point: Union[Tuple[int, int], Vector2, None]) -> None:
+        if point is None:
+            self.drawable.rotate(angle)
+        else:
+            self.drawable.rotate_through_point(angle, point)
 
 class AnimationScaleSize(AbstractAnimationClass):
 
-    def __call__(self, milliseconds: float, width: int, height: int, width_offset=1, height_offset=1, at_every_frame=None, after_move=None) -> None:
-        width = round(max(width, 0))
-        height = round(max(height, 0))
-        if milliseconds <= 0 or width_offset == 0 or height_offset == 0 or (width == self.drawable.width and height == self.drawable.height):
-            self.drawable.size = (width, height)
-            if callable(at_every_frame):
-                at_every_frame()
-            self.master.draw_and_refresh()
-            if callable(after_move):
-                after_move()
+    def __init__(self, drawable: Drawable, field: str, size: int, offset=1):
+        super().__init__(drawable)
+        self.__size = round(max(size, 0))
+        self.__field = field
+        if offset == 0 or self.__size == self.drawable[field]:
+            self.__offset = 0
+        else:
+            self.__offset = abs(offset) * ((self.__size - self.drawable[field]) // abs(self.__size - self.drawable[field]))
+        self.__actual_size = self.drawable[field]
+
+    def __call__(self) -> None:
+        if self.__offset == 0:
+            self.stop()
             return
-        width_offset = abs(width_offset) * ((width - self.drawable.width) // abs(width - self.drawable.width)) if width != self.drawable.width else 0
-        height_offset = abs(height_offset) * ((height - self.drawable.height) // abs(height - self.drawable.height)) if height != self.drawable.height else 0
-        default_surface = self.drawable.image
-        actual_width = self.drawable.width + width_offset
-        actual_height = self.drawable.height + height_offset
+        self.__actual_size += self.__offset
         not_size_set = lambda size, actual_size, offset: (offset < 0 and actual_size > size) or (offset > 0 and actual_size < size)
-        while not_size_set(width, actual_width, width_offset) or not_size_set(height, actual_height, height_offset):
-            if not self.started():
-                return
-            self.drawable.image = Drawable.surface_resize(default_surface, size=(actual_width, actual_height))
+        if not_size_set(self.__size, self.__actual_size, self.__offset):
+            self.drawable[self.__field] = self.__actual_size
+        else:
+            self.stop()
+
+    def default(self) -> None:
+        self.drawable[self.__field] = self.__size
+
+class AnimationScaleWidth(AnimationScaleSize):
+    
+    def __init__(self, drawable: Drawable, width: int, offset=1):
+        super().__init__(drawable, "width", width, offset=offset)
+
+class AnimationScaleHeight(AnimationScaleSize):
+
+    def __init__(self, drawable: Drawable, height: int, offset=1):
+        super().__init__(drawable, "height", height, offset=offset)
+
+class Animation:
+
+    def __init__(self, drawable: Drawable):
+        self.__drawable = drawable
+        self.__animations_order = ["scale_width", "scale_height", "rotate", "move"]
+        self.__animations = dict.fromkeys(self.__animations_order)
+
+    def move(self, speed=1, **position):
+        self.__animations["move"] = AnimationMove(self.__drawable, speed=speed, **position)
+        return self
+
+    def rotate(self, angle: float, offset=1, point=None):
+        self.__animations["rotate"] = AnimationRotation(self.__drawable, angle, offset=offset, point=point)
+        return self
+
+    def scale_width(self, width: int, offset=1):
+        self.__animations["scale_width"] = AnimationScaleWidth(self.__drawable, width, offset=offset)
+        return self
+
+    def scale_height(self, height: int, offset=1):
+        self.__animations["scale_height"] = AnimationScaleHeight(self.__drawable, height, offset=offset)
+        return self
+
+    def __get(self, animation: str) -> AbstractAnimationClass:
+        return self.__animations[animation]
+
+    def __iter_animations(self) -> Iterator[AbstractAnimationClass]:
+        for animation_name in self.__animations_order:
+            animation = self.__get(animation_name)
+            if isinstance(animation, AbstractAnimationClass):
+                yield animation
+
+    def __only_move_animation(self) -> bool:
+        return (isinstance(self.__animations["move"], AbstractAnimationClass) and all(not isinstance(anim, AbstractAnimationClass) for name, anim in self.__animations.items() if name != "move"))
+
+    def start(self, master, at_every_frame=None) -> None:
+        default_image = self.__drawable.image
+        default_pos = self.__drawable.center
+        only_move = self.__only_move_animation()
+        clock = pygame.time.Clock()
+        while any(animation.started() for animation in self.__iter_animations()):
+            clock.tick(60)
+            for animation in self.__iter_animations():
+                if animation.started():
+                    animation()
+                else:
+                    animation.default()
             if callable(at_every_frame):
                 at_every_frame()
-            self.master.draw_and_refresh(pump=True)
-            pygame.time.wait(milliseconds)
-            if not_size_set(width, actual_width, width_offset):
-                actual_width += width_offset
-            if not_size_set(height, actual_height, height_offset):
-                actual_height += height_offset
-        self.drawable.image = Drawable.surface_resize(default_surface, size=(width, height))
+            master.draw_and_refresh()
+            self.__drawable.image = default_image
+            self.__drawable.center = default_pos
+        for animation in self.__iter_animations():
+            animation.default()
         if callable(at_every_frame):
             at_every_frame()
-        self.master.draw_and_refresh()
-        if callable(after_move):
-            after_move()
-
-class AnimationScaleWidth(AbstractAnimationClass):
-
-    def __call__(self, milliseconds: float, width: int, offset=1, at_every_frame=None, after_move=None) -> None:
-        width = round(max(width, 0))
-        if milliseconds <= 0 or offset == 0 or width == self.drawable.width:
-            self.drawable.width = width
-            if callable(at_every_frame):
-                at_every_frame()
-            self.master.draw_and_refresh()
-            if callable(after_move):
-                after_move()
-            return
-        offset = abs(offset) * ((width - self.drawable.width) // abs(width - self.drawable.width))
-        default_surface = self.drawable.image
-        actual_width = self.drawable.width + offset
-        not_size_set = lambda size, actual_size, offset: (offset < 0 and actual_size > size) or (offset > 0 and actual_size < size)
-        while not_size_set(width, actual_width, offset):
-            if not self.started():
-                return
-            self.drawable.image = Drawable.surface_resize(default_surface, width=actual_width)
-            if callable(at_every_frame):
-                at_every_frame()
-            self.master.draw_and_refresh(pump=True)
-            pygame.time.wait(milliseconds)
-            actual_width += offset
-        self.drawable.image = Drawable.surface_resize(default_surface, width=width)
-        if callable(at_every_frame):
-            at_every_frame()
-        self.master.draw_and_refresh()
-        if callable(after_move):
-            after_move()
-
-class AnimationScaleHeight(AbstractAnimationClass):
-
-    def __call__(self, milliseconds: float, height: int, offset=1, at_every_frame=None, after_move=None) -> None:
-        height = round(max(height, 0))
-        if milliseconds <= 0 or offset == 0 or height == self.drawable.height:
-            self.drawable.height = height
-            if callable(at_every_frame):
-                at_every_frame()
-            self.master.draw_and_refresh()
-            if callable(after_move):
-                after_move()
-            return
-        offset = abs(offset) * ((height - self.drawable.height) // abs(height - self.drawable.height))
-        default_surface = self.drawable.image
-        actual_height = self.drawable.height + offset
-        not_size_set = lambda size, actual_size, offset: (offset < 0 and actual_size > size) or (offset > 0 and actual_size < size)
-        while not_size_set(height, actual_height, offset):
-            if not self.started():
-                return
-            self.drawable.image = Drawable.surface_resize(default_surface, height=actual_height)
-            if callable(at_every_frame):
-                at_every_frame()
-            self.master.draw_and_refresh(pump=True)
-            pygame.time.wait(milliseconds)
-            actual_height += offset
-        self.drawable.image = Drawable.surface_resize(default_surface, height=height)
-        if callable(at_every_frame):
-            at_every_frame()
-        self.master.draw_and_refresh()
-        if callable(after_move):
-            after_move()
+        master.draw_and_refresh(pump=True)
+        self.__animations = dict.fromkeys(self.__animations_order)

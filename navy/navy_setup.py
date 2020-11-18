@@ -68,12 +68,11 @@ class ShipSetup(Image):
 
     def animate_orient_set(self, orient: str, first_box: BoxSetup, new_cases: Sequence[BoxSetup]) -> None:
         if orient in (ShipSetup.VERTICAL, ShipSetup.HORIZONTAL) and orient != self.__orient:
-            milliseconds = 10
             angle_offset = 10
             if orient == ShipSetup.HORIZONTAL:
-                self.animate_rotate(self.master, milliseconds, 90, point=first_box.center, angle_offset=angle_offset)
+                self.animate_rotate(self.master, 90, point=first_box.center, offset=angle_offset)
             else:
-                self.animate_rotate(self.master, milliseconds, -90, point=first_box.center, angle_offset=angle_offset)
+                self.animate_rotate(self.master, -90, point=first_box.center, offset=angle_offset)
             self.__place_ship([first_box] + new_cases)
             self.__orient = orient
 
@@ -106,7 +105,7 @@ class ShipSetup(Image):
     def unselect_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEBUTTONUP and self.clicked:
             if (self.on_move and not self.place_ship_on_map()) or (not self.on_move and not self.rotate_ship()):
-                self.animate_move(self.master, 10, speed=30, center=self.center_before_click)
+                self.animate_move(self.master, speed=30, center=self.center_before_click)
             self.clicked = self.on_move = False
             self.master.remove_boxes_highlight()
 
