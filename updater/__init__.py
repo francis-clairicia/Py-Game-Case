@@ -10,6 +10,18 @@ import tkinter.ttk as ttk
 from tkinter.messagebox import showinfo, showerror
 from zipfile import ZipFile
 from my_pygame import threaded_function
+from functools import wraps
+
+def showerror_exception(function):
+
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        try:
+            function(*args, **kwargs)
+        except Exception as e:
+            showerror(e.__class__.__name__, str(e))
+
+    return wrapper
 
 class Updater(tk.Tk):
 
@@ -22,7 +34,6 @@ class Updater(tk.Tk):
         tk.Tk.__init__(self)
         self.title("Updater")
         self.geometry("{}x{}".format(500, 300))
-        self.protocol("WM_DELETE_WINDOW", lambda: None)
 
         self.label = tk.Label(self, font=("Times New Roman", 15))
         self.label.grid(row=0, sticky=tk.NSEW)
@@ -76,6 +87,7 @@ class Updater(tk.Tk):
         os.execv(self.executable, [self.executable])
 
     @threaded_function
+    @showerror_exception
     def __install(self, release: dict) -> None:
         archive_to_download = self.__search_archive_assets(release)
         if archive_to_download is None:
@@ -104,12 +116,15 @@ class Updater(tk.Tk):
         except requests.HTTPError:
             return None
         archive = os.path.join(self.filepath, asset["name"])
+        self.protocol("WM_DELETE_WINDOW", lambda: None)
         with open(archive, "wb") as file_stream:
             for chunk in response.iter_content(chunk_size=1024*512):
                 self.progress["value"] += file_stream.write(chunk)
+        self.protocol("WM_DELETE_WINDOW", self.quit)
         return archive
 
     def __extract(self, archive: str) -> None:
+        self.protocol("WM_DELETE_WINDOW", lambda: None)
         with ZipFile(archive, "r") as zip_file:
             self.label["text"] = "Installing {}...".format(os.path.basename(archive))
             file_list = zip_file.namelist()
@@ -124,6 +139,7 @@ class Updater(tk.Tk):
                     zip_file.extract(file, path=self.filepath)
                 finally:
                     self.progress["value"] = i
+        self.protocol("WM_DELETE_WINDOW", self.quit)
         os.remove(archive)
 
     def __check_github_api_rate_limit(self) -> bool:
