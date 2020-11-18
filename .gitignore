@@ -10,6 +10,7 @@ window.ini
 #Project generated files
 window/
 settings.ini
+token
 
 #Visual Studio code workspace settings
 .vscode

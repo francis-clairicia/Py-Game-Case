@@ -48,7 +48,7 @@ args = parser.parse_args()
 
 application = "py_game_case"
 
-dependencies = ["pygame", "my_pygame", "navy", "four_in_a_row"]
+dependencies = ["pygame", "my_pygame", "tkinter", "updater", "navy", "four_in_a_row"]
 
 additional_files = ["resources"]
 
