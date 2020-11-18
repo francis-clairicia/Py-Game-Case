@@ -123,6 +123,7 @@ class Navy(DrawableListVertical):
         self.box_hit_img.clear()
         for box in self.boxes:
             box.reset()
+        self.set_box_clickable(True)
 
     @property
     def map(self) -> Dict[Tuple[int, int], int]:
