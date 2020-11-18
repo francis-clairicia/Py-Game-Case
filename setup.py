@@ -9,7 +9,7 @@ from cx_Freeze import setup, Executable
 
 def zip_compress():
     global executable_infos, options
-    zip_filename = "{project_name}-v{version}-{os}.zip".format(**executable_infos, os=sys.platform).replace(" ", "_")
+    zip_filename = "{}-{}.zip".format(executable_infos["project_name"], sys.platform).replace(" ", "_")
     print(f"Compressing executable in {zip_filename}...")
     output_folder = options.get("build_exe", ".")
     output_zip = os.path.join(output_folder, zip_filename)

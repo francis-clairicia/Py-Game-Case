@@ -98,7 +98,7 @@ class Updater(tk.Tk):
 
     def __search_archive_assets(self, release: dict) -> dict:
         for asset in filter(lambda asset: asset["state"] == "uploaded", release["assets"]):
-            if asset["name"] == "{}-v{}-{}.zip".format(Updater.NAME, release["tag_name"], sys.platform):
+            if asset["name"] == "{}-{}.zip".format(Updater.NAME, sys.platform):
                 return asset
         return None
 
