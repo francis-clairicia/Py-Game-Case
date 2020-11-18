@@ -71,13 +71,13 @@ class Updater(tk.Tk):
     def install(self, release: dict) -> None:
         self.label["text"] = str()
         self.progress["value"] = self.progress["maximum"] = 0
-        self.__install(release)
+        self.after(100, lambda: self.__install(release))
         self.mainloop()
         os.execv(self.executable, [self.executable])
 
     @threaded_function
     def __install(self, release: dict) -> None:
-        archive_to_download = self.__search_archive_assets(version, release)
+        archive_to_download = self.__search_archive_assets(release)
         if archive_to_download is None:
             showerror("No assets", "There is no assets for this version or not for your platform")
         else:
@@ -88,9 +88,9 @@ class Updater(tk.Tk):
                 self.__extract(archive_filepath)
         self.quit()
 
-    def __search_archive_assets(self, version: str, release: dict) -> dict:
+    def __search_archive_assets(self, release: dict) -> dict:
         for asset in filter(lambda asset: asset["state"] == "uploaded", release["assets"]):
-            if asset["name"] == "{}-v{}-{}.zip".format(Updater.NAME, version, sys.platform):
+            if asset["name"] == "{}-v{}-{}.zip".format(Updater.NAME, release["tag_name"], sys.platform):
                 return asset
         return None
 
