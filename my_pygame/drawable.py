@@ -7,6 +7,7 @@ from pygame.math import Vector2
 from .surface import create_surface
 from .theme import ThemedObject
 from .thread import threaded_function
+from .clock import Clock
 
 class Drawable(Sprite, ThemedObject):
 
@@ -154,8 +155,8 @@ class Drawable(Sprite, ThemedObject):
         self.__rect = self.__surface.get_rect(x=self.__x, y=self.__y)
         self.__former_moves = {"x": self.__x, "y": self.__y}
 
-    def animate_move(self, master, speed=1, at_every_frame=None, **position) -> None:
-        self.__animation.move(speed=speed, **position).start(master, at_every_frame)
+    def animate_move(self, master, speed=1, milliseconds=10, at_every_frame=None, **position) -> None:
+        self.__animation.move(speed=speed, milliseconds=milliseconds, **position).start(master, at_every_frame)
 
     def rotate(self, angle: float) -> None:
         angle %= 360
@@ -171,8 +172,8 @@ class Drawable(Sprite, ThemedObject):
         self.image = image
         self.center = rect.center
 
-    def animate_rotate(self, master, angle: float, offset=1, point=None, at_every_frame=None) -> None:
-        self.__animation.rotate(angle=angle, offset=offset, point=point).start(master, at_every_frame)
+    def animate_rotate(self, master, angle: float, offset=1, point=None, milliseconds=10, at_every_frame=None) -> None:
+        self.__animation.rotate(angle=angle, offset=offset, point=point, milliseconds=milliseconds).start(master, at_every_frame)
     
     @staticmethod
     def surface_rotate(surface: pygame.Surface, rect: pygame.Rect, angle: float, point: Union[Tuple[int, int], Vector2]) -> Tuple[pygame.Surface, pygame.Rect]:
@@ -253,11 +254,11 @@ class Drawable(Sprite, ThemedObject):
         else:
             self.__valid_size = True
 
-    def animate_resize_width(self, master, width: int, offset=1, at_every_frame=None) -> None:
-        self.__animation.scale_width(width=width, offset=offset).start(master, at_every_frame)
+    def animate_resize_width(self, master, width: int, offset=1, milliseconds=10, at_every_frame=None) -> None:
+        self.__animation.scale_width(width=width, offset=offset, milliseconds=milliseconds).start(master, at_every_frame)
 
-    def animate_resize_height(self, master, height: int, offset=1, at_every_frame=None) -> None:
-        self.__animation.scale_height(height=height, offset=offset).start(master, at_every_frame)
+    def animate_resize_height(self, master, height: int, offset=1, milliseconds=10, at_every_frame=None) -> None:
+        self.__animation.scale_height(height=height, offset=offset, milliseconds=milliseconds).start(master, at_every_frame)
 
     animation = property(lambda self: self.__animation)
 
@@ -286,9 +287,11 @@ class Drawable(Sprite, ThemedObject):
 
 class AbstractAnimationClass:
 
-    def __init__(self, drawable: Drawable):
+    def __init__(self, drawable: Drawable, milliseconds: int):
         self.__drawable = drawable
         self.__animation_started = True
+        self.__clock = Clock()
+        self.__milliseconds = max(round(milliseconds), 0)
 
     def started(self) -> bool:
         return self.__animation_started
@@ -297,6 +300,9 @@ class AbstractAnimationClass:
         self.__animation_started = False
         self.default()
 
+    def ready(self) -> bool:
+        return self.__clock.elapsed_time(self.__milliseconds)
+
     def __call__(self) -> None:
         raise NotImplementedError
 
@@ -304,20 +310,22 @@ class AbstractAnimationClass:
         raise NotImplementedError
 
     drawable = property(lambda self: self.__drawable)
+    milliseconds = property(lambda self: self.__milliseconds)
 
 class AnimationMove(AbstractAnimationClass):
 
-    def __init__(self, drawable: Drawable, speed=1, **position):
-        super().__init__(drawable)
+    def __init__(self, drawable: Drawable, milliseconds: int, speed=1, **position):
+        super().__init__(drawable, milliseconds)
         self.__position = position
         self.__speed = speed
         self.__increment = 0
 
     def __call__(self) -> None:
-        if self.__speed <= 0:
+        if self.milliseconds == 0 or self.__speed <= 0:
             self.stop()
             return
-        self.__increment += 1
+        if self.ready():
+            self.__increment += 1
         length = self.__increment * self.__speed
         projection = Drawable(self.drawable.image)
         projection.move(**self.__position)
@@ -333,18 +341,19 @@ class AnimationMove(AbstractAnimationClass):
 
 class AnimationRotation(AbstractAnimationClass):
 
-    def __init__(self, drawable: Drawable, angle: float, offset=1, point=None):
-        super().__init__(drawable)
+    def __init__(self, drawable: Drawable, milliseconds: int, angle: float, offset=1, point=None):
+        super().__init__(drawable, milliseconds)
         self.__angle = angle
         self.__offset = abs(offset) * (angle / abs(angle)) if angle != 0 else 0
         self.__actual_angle = 0
         self.__pivot = point
 
     def __call__(self) -> None:
-        if self.__angle == 0 or self.__offset == 0:
+        if self.milliseconds == 0 or self.__angle == 0 or self.__offset == 0:
             self.stop()
             return
-        self.__actual_angle += self.__offset
+        if self.ready():
+            self.__actual_angle += self.__offset
         if (self.__offset < 0 and self.__actual_angle > self.__angle) or (self.__offset > 0 and self.__actual_angle < self.__angle):
             self.__rotate(self.__actual_angle, self.__pivot)
         else:
@@ -361,8 +370,8 @@ class AnimationRotation(AbstractAnimationClass):
 
 class AnimationScaleSize(AbstractAnimationClass):
 
-    def __init__(self, drawable: Drawable, field: str, size: int, offset=1):
-        super().__init__(drawable)
+    def __init__(self, drawable: Drawable, milliseconds: int, field: str, size: int, offset=1):
+        super().__init__(drawable, milliseconds)
         self.__size = round(max(size, 0))
         self.__field = field
         if offset == 0 or self.__size == self.drawable[field]:
@@ -372,10 +381,11 @@ class AnimationScaleSize(AbstractAnimationClass):
         self.__actual_size = self.drawable[field]
 
     def __call__(self) -> None:
-        if self.__offset == 0:
+        if self.milliseconds == 0 or self.__offset == 0:
             self.stop()
             return
-        self.__actual_size += self.__offset
+        if self.ready():
+            self.__actual_size += self.__offset
         not_size_set = lambda size, actual_size, offset: (offset < 0 and actual_size > size) or (offset > 0 and actual_size < size)
         if not_size_set(self.__size, self.__actual_size, self.__offset):
             self.drawable[self.__field] = self.__actual_size
@@ -387,13 +397,13 @@ class AnimationScaleSize(AbstractAnimationClass):
 
 class AnimationScaleWidth(AnimationScaleSize):
     
-    def __init__(self, drawable: Drawable, width: int, offset=1):
-        super().__init__(drawable, "width", width, offset=offset)
+    def __init__(self, drawable: Drawable, milliseconds: int, width: int, offset=1):
+        super().__init__(drawable, milliseconds, "width", width, offset=offset)
 
 class AnimationScaleHeight(AnimationScaleSize):
 
-    def __init__(self, drawable: Drawable, height: int, offset=1):
-        super().__init__(drawable, "height", height, offset=offset)
+    def __init__(self, drawable: Drawable, milliseconds: int, height: int, offset=1):
+        super().__init__(drawable, milliseconds, "height", height, offset=offset)
 
 class Animation:
 
@@ -401,21 +411,22 @@ class Animation:
         self.__drawable = drawable
         self.__animations_order = ["scale_width", "scale_height", "rotate", "move"]
         self.__animations = dict.fromkeys(self.__animations_order)
+        self.__clock = pygame.time.Clock()
 
-    def move(self, speed=1, **position):
-        self.__animations["move"] = AnimationMove(self.__drawable, speed=speed, **position)
+    def move(self, speed=1, milliseconds=10, **position):
+        self.__animations["move"] = AnimationMove(self.__drawable, milliseconds, speed=speed, **position)
         return self
 
-    def rotate(self, angle: float, offset=1, point=None):
-        self.__animations["rotate"] = AnimationRotation(self.__drawable, angle, offset=offset, point=point)
+    def rotate(self, angle: float, offset=1, point=None, milliseconds=10):
+        self.__animations["rotate"] = AnimationRotation(self.__drawable, milliseconds, angle, offset=offset, point=point)
         return self
 
-    def scale_width(self, width: int, offset=1):
-        self.__animations["scale_width"] = AnimationScaleWidth(self.__drawable, width, offset=offset)
+    def scale_width(self, width: int, offset=1, milliseconds=10):
+        self.__animations["scale_width"] = AnimationScaleWidth(self.__drawable, milliseconds, width, offset=offset)
         return self
 
-    def scale_height(self, height: int, offset=1):
-        self.__animations["scale_height"] = AnimationScaleHeight(self.__drawable, height, offset=offset)
+    def scale_height(self, height: int, offset=1, milliseconds=10):
+        self.__animations["scale_height"] = AnimationScaleHeight(self.__drawable, milliseconds, height, offset=offset)
         return self
 
     def __get(self, animation: str) -> AbstractAnimationClass:
@@ -434,9 +445,8 @@ class Animation:
         default_image = self.__drawable.image
         default_pos = self.__drawable.center
         only_move = self.__only_move_animation()
-        clock = pygame.time.Clock()
         while any(animation.started() for animation in self.__iter_animations()):
-            clock.tick(60)
+            self.__clock.tick(master.get_framerate())
             for animation in self.__iter_animations():
                 if animation.started():
                     animation()
@@ -444,12 +454,13 @@ class Animation:
                     animation.default()
             if callable(at_every_frame):
                 at_every_frame()
-            master.draw_and_refresh()
+            master.draw_and_refresh(pump=True)
             self.__drawable.image = default_image
             self.__drawable.center = default_pos
         for animation in self.__iter_animations():
             animation.default()
         if callable(at_every_frame):
             at_every_frame()
-        master.draw_and_refresh(pump=True)
-        self.__animations = dict.fromkeys(self.__animations_order)
+        master.draw_and_refresh()
+        for key in self.__animations:
+            self.__animations[key] = None

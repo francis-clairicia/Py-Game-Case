@@ -298,6 +298,10 @@ class Window(object):
         Window.__fps = int(framerate)
 
     @staticmethod
+    def get_framerate() -> int:
+        return Window.__fps
+
+    @staticmethod
     def show_fps(status: bool) -> None:
         Window.__show_fps = bool(status)
 
