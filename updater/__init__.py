@@ -16,11 +16,12 @@ from functools import wraps
 def showerror_exception(function):
 
     @wraps(function)
-    def wrapper(*args, **kwargs):
+    def wrapper(window: tk.Tk, *args, **kwargs):
         try:
-            function(*args, **kwargs)
+            function(window, *args, **kwargs)
         except Exception as e:
             showerror(e.__class__.__name__, str(e))
+            window.quit()
 
     return wrapper
 
