@@ -62,8 +62,6 @@ class Updater(tk.Tk):
         self.session.close()
 
     def __get_release(self, url: str) -> dict:
-        if self.__check_github_api_rate_limit() is False:
-            return None
         try:
             response = self.session.get(url)
             response.raise_for_status()
@@ -72,12 +70,16 @@ class Updater(tk.Tk):
         return response.json()
 
     def install_latest_version(self, actual_version: str) -> None:
+        if self.__check_github_api_rate_limit() is False:
+            return
         url = "https://api.github.com/repos/{}/{}/releases/latest".format(Updater.OWNER, Updater.REPOSITORY)
         release = self.__get_release(url)
         if release is not None and packaging.version.parse(release["tag_name"]) > packaging.version.parse(actual_version):
             self.__install(release)
 
     def install_version(self, version: str) -> None:
+        if self.__check_github_api_rate_limit() is False:
+            return
         try:
             version = str(packaging.version.Version(version))
             url = "https://api.github.com/repos/{}/{}/releases/tags/{}".format(Updater.OWNER, Updater.REPOSITORY, version)
