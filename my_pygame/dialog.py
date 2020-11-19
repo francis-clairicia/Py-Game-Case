@@ -20,10 +20,6 @@ class Dialog(Window):
         self.__hidden_objects_master = list(filter(lambda obj: not obj.is_shown(), self.__master.objects.drawable))
 
     @property
-    def master(self) -> Window:
-        return self.__master
-
-    @property
     def frame(self) -> RectangleShape:
         return self.__frame
 
@@ -35,3 +31,6 @@ class Dialog(Window):
         Window.mainloop(self)
         self.__master.show_all(without=self.__hidden_objects_master)
         return 0
+
+    def close(self) -> None:
+        self.__master.close()
