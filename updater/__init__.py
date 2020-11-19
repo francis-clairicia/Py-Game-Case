@@ -92,6 +92,7 @@ class Updater(tk.Tk):
 
     def __install(self, release: dict) -> None:
         self.label["text"] = str()
+        self.progress["mode"] = "determinate"
         self.progress["value"] = self.progress["maximum"] = 0
         self.after(100, lambda: self.__start_install(release))
         self.mainloop()
@@ -150,8 +151,12 @@ class Updater(tk.Tk):
                     zip_file.extract(file, path=self.filepath)
                 finally:
                     self.progress["value"] = i
-        self.protocol("WM_DELETE_WINDOW", self.quit)
+        self.label["text"] = "Deleting archive"
+        self.progress["mode"] = "indeterminate"
+        self.progress.start()
         os.remove(archive)
+        self.protocol("WM_DELETE_WINDOW", self.quit)
+        self.progress.stop()
 
     def __check_github_api_rate_limit(self) -> bool:
         url = "https://api.github.com/rate_limit"
