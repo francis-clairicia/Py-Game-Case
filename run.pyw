@@ -15,10 +15,10 @@ ALL_GAMES = {
 }
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("game", nargs="?", help="Game to launch -> {}".format(" or ".join(ALL_GAMES)))
-    parser.add_argument("--update", action="store_true", help="Update the Launcher to the latest version")
-    parser.add_argument("--install", metavar="version", help="Install a specific version of the Laucher")
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("game", nargs="?")
+    parser.add_argument("--update", action="store_true")
+    parser.add_argument("--install", metavar="version")
     args = parser.parse_args()
 
     updater = Updater()
