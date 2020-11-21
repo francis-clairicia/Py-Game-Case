@@ -2,15 +2,29 @@
 
 import sys
 import subprocess
-from typing import Callable
+from typing import Callable, Sequence
 import pygame
 from my_pygame import MainWindow, Window, Image, Button, Sprite, RectangleShape, HorizontalGradientShape
 from my_pygame import ButtonListVertical, DrawableListHorizontal
 from my_pygame import Clickable
 from my_pygame import TRANSPARENT, WHITE, BLACK, YELLOW
 from my_pygame import set_color_alpha, change_brightness
-from .constants import RESOURCES, GAMES
-from .settings import Settings
+from .constants import RESOURCES, GAMES, SETTINGS
+from .settings import SettingsWindow
+
+class GameProcess(subprocess.Popen):
+
+    def __init__(self, game_id: str):
+        if sys.argv[0].endswith((".py", ".pyw")):
+            args = [sys.executable, sys.argv[0], game_id]
+        else:
+            args = [sys.executable, game_id]
+        super().__init__(args, shell=False, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.__game_id = game_id
+
+    @property
+    def game_id(self) -> str:
+        return self.__game_id
 
 class TitleButton(Button):
 
@@ -92,16 +106,19 @@ class PyGameCase(MainWindow):
         self.logo = Image(RESOURCES.IMG["logo"], width=self.bg[0].width)
 
         self.buttons_game_launch = ButtonListVertical(offset=30)
+        self.buttons_game_dict = dict()
         for game_id, game_name in GAMES.items():
-            self.buttons_game_launch.add(TitleButton(
-                self, lambda game=game_id: self.show_preview(game), text=game_name,
-                callback=lambda game=game_id: self.launch_game(game)
-            ))
+            button = TitleButton(
+                self, lambda game_id=game_id: self.show_preview(game_id), text=game_name,
+                callback=lambda game_id=game_id: self.launch_game(game_id)
+            )
+            self.buttons_game_launch.add(button)
             self.image_game_preview.add_sprite(game_id, RESOURCES.IMG[game_id], size=self.size)
+            self.buttons_game_dict[game_id] = button
         self.game_id = None
         self.game_launched_processes = list()
 
-        self.settings_section = Settings(self)
+        self.settings_section = SettingsWindow(self)
 
         self.button_settings = SettingsButton(self, size=40, callback=self.settings_section.mainloop)
         self.button_settings.force_use_highlight_thickness(True)
@@ -123,8 +140,8 @@ class PyGameCase(MainWindow):
         for obj in self.objects.drawable:
             save_objects_center.append(obj.center)
         self.buttons_game_launch.right = self.left
-        for obj in [self.logo, self.button_settings]:
-            obj.hide()
+        self.button_settings.left = self.right
+        self.logo.hide()
         logo = Image(RESOURCES.IMG["logo"])
         logo.midtop = self.midbottom
         self.objects.add(logo)
@@ -140,8 +157,13 @@ class PyGameCase(MainWindow):
         self.focus_mode(Button.MODE_KEY)
 
     def update(self) -> None:
-        for process in list(filter(lambda process: process.poll() is not None, self.game_launched_processes)):
-            self.game_launched_processes.remove(process)
+        if self.game_launched_processes:
+            for process in list(filter(lambda process: process.poll() is not None, self.game_launched_processes)):
+                self.game_launched_processes.remove(process)
+                self.buttons_game_dict[process.game_id].text = GAMES[process.game_id]
+                self.buttons_game_dict[process.game_id].state = Button.NORMAL
+            if not self.game_launched_processes and not pygame.display.get_active():
+                pass
         if all(not button.has_focus() and not button.hover for button in self.buttons_game_launch) and self.game_id is not None:
             self.image_game_preview.animate_move(self, speed=75, right=self.left)
             self.game_id = None
@@ -150,22 +172,20 @@ class PyGameCase(MainWindow):
         if self.game_id == game_id:
             return
         self.game_id = game_id
-        speed = 100
-        self.image_game_preview.animate_move(self, speed=speed, right=self.left)
+        self.image_game_preview.animate_move_in_background(self, speed=75, right=self.left, after_animation=self.__show_preview)
+
+    def __show_preview(self) -> None:
         self.image_game_preview.set_sprite(self.game_id)
-        self.image_game_preview.animate_move(self, speed=speed, center=self.center)
+        self.image_game_preview.animate_move_in_background(self, speed=75, center=self.center)
 
     def launch_game(self, game_id: str) -> None:
-        if sys.argv[0].endswith((".py", ".pyw")):
-            args = [sys.executable, sys.argv[0], game_id]
-        else:
-            args = [sys.executable, game_id]
-        process = subprocess.Popen(args, shell=False, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        self.game_launched_processes.append(process)
+        self.game_launched_processes.append(GameProcess(game_id))
+        self.buttons_game_dict[game_id].text = GAMES[game_id] + " - Running"
+        self.buttons_game_dict[game_id].state = Button.DISABLED
+        self.iconify()
 
     def close(self) -> None:
         if self.game_launched_processes:
-            if pygame.display.get_active():
-                pygame.display.iconify()
+            self.iconify()
         else:
             self.stop(force=True)

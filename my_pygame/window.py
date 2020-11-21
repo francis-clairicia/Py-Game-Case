@@ -17,6 +17,7 @@ from .clock import Clock
 from .colors import BLACK, WHITE, BLUE, TRANSPARENT
 from .resources import Resources
 from .multiplayer import ServerSocket, ClientSocket
+from .path import set_constant_file
 
 def set_value_in_range(value: float, min_value: float, max_value: float) -> float:
     if value < min_value:
@@ -26,16 +27,30 @@ def set_value_in_range(value: float, min_value: float, max_value: float) -> floa
     return value
 
 class WindowCallback(object):
-    def __init__(self, callback: Callable[..., Any], wait_time: float):
-        self.wait_time = wait_time
-        self.callback = callback
-        self.clock = Clock()
+    def __init__(self, master, callback: Callable[..., Any], wait_time: float):
+        self.__master = master
+        self.__wait_time = wait_time
+        self.__callback = callback
+        self.__clock = Clock()
 
     def can_call(self) -> bool:
-        return self.clock.elapsed_time(self.wait_time, restart=False)
+        return self.__clock.elapsed_time(self.__wait_time, restart=False)
 
     def __call__(self):
-        return self.callback()
+        self.__callback()
+        self.kill()
+
+    def kill(self) -> None:
+        self.__master.remove_window_callback(self)
+
+class WindowCallbackList(list):
+
+    def process(self) -> None:
+        if not self:
+            return
+        callback_list = self.copy()
+        for callback in filter(lambda callback: callback.can_call(), callback_list):
+            callback()
 
 class Window(object):
 
@@ -52,7 +67,7 @@ class Window(object):
     __default_key_repeat = (0, 0)
     __text_input_enabled = False
     __all_opened = list()
-    __config_file = os.path.join(sys.path[0], "window.ini")
+    __config_file = set_constant_file("window.ini", raise_error=False)
     __sound_volume = 50
     __music_volume = 50
     __enable_music = True
@@ -87,7 +102,7 @@ class Window(object):
         self.__joystick_handler_dict = dict()
         self.__joystick_state_dict = dict()
         self.__mouse_handler_list = list()
-        self.__callback_after = list()
+        self.__callback_after = WindowCallbackList()
         self.rect_to_update = None
         self.bg_color = bg_color
         self.bg_music = bg_music
@@ -126,10 +141,10 @@ class Window(object):
             Window.load_config()
             Window.__joystick.set(nb_joystick)
             Window.__default_event_binding()
-            if size[0] <= 0 or size[1] <= 0:
-                video_info = pygame.display.Info()
-                size = (video_info.current_w, video_info.current_h)
+            if not isinstance(size, (list, tuple)) or len(size) != 2 or size[0] <= 0 or size[1] <= 0:
+                size = (0, 0)
             surface = pygame.display.set_mode(size, flags)
+            pygame.event.clear()
             Window.__size = surface.get_size()
             Window.__flags = flags
             if isinstance(resources, Resources):
@@ -193,6 +208,10 @@ class Window(object):
     def set_title(title: str) -> None:
         pygame.display.set_caption(title)
 
+    @staticmethod
+    def iconify() -> bool:
+        return pygame.display.iconify()
+
     @property
     def bg_music(self) -> Union[str, None]:
         return self.__bg_music
@@ -221,14 +240,10 @@ class Window(object):
         self.set_grid()
         self.fps_update()
         self.on_start_loop()
-        for event in pygame.event.get():
-            continue
         while self.__loop:
             self.__main_clock.tick(Window.__fps)
             self.handle_bg_music()
-            for callback in tuple(filter(lambda window_callback: window_callback.can_call(), self.__callback_after)):
-                callback()
-                self.__callback_after.remove(callback)
+            self.__callback_after.process()
             self.objects.focus_mode_update()
             self.keyboard.update()
             self.update()
@@ -444,7 +459,7 @@ class Window(object):
         Window.__min_size = max(width, 0), max(height, 0)
 
     def after(self, milliseconds: float, callback: Callable[..., Any]) -> WindowCallback:
-        window_callback = WindowCallback(callback, milliseconds)
+        window_callback = WindowCallback(self, callback, milliseconds)
         self.__callback_after.append(window_callback)
         return window_callback
 

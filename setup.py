@@ -60,7 +60,7 @@ executable_infos = {
     "executables": [
         {
             "script": "run.pyw",
-            "name": "Launcher",
+            "name": "Py_game_case",
             "base": "Win32GUI",
             "icon": "resources/py_game_case/img/icon.ico"
         }

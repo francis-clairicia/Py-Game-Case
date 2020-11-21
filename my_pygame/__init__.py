@@ -6,7 +6,7 @@ from .focusable import Focusable
 from .clickable import Clickable
 from .image import Image
 from .text import Text
-from .shape import Shape, RectangleShape, CircleShape, PolygonShape, HorizontalGradientShape
+from .shape import Shape, RectangleShape, CircleShape, PolygonShape, HorizontalGradientShape, VerticalGradientShape, RadialGradientShape, SquaredGradientShape
 from .button import Button, ImageButton
 from .entry import Entry
 from .progress import ProgressBar

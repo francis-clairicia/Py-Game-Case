@@ -1,12 +1,10 @@
 # -*- coding: Utf-8
 
-import os
-import sys
 from my_pygame import set_constant_directory, set_constant_file
 from my_pygame import Resources
 from my_pygame import BLUE_DARK
 
-WINDOW_CONFIG_FILE = os.path.join(sys.path[0], "window", "four_in_a_row.ini")
+WINDOW_CONFIG_FILE = set_constant_file("window", "four_in_a_row.ini", raise_error=False)
 
 RESOURCES = Resources()
 

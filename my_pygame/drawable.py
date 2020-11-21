@@ -144,7 +144,7 @@ class Drawable(Sprite, ThemedObject):
             kwargs["x"] = x
         if not any(key in kwargs for key in ("y", "top", "bottom", "centery", *common)):
             kwargs["y"] = y
-        self.__rect = self.image.get_rect(**kwargs)
+        self.__rect = self.__surface.get_rect(**kwargs)
         self.__x = self.__rect.x
         self.__y = self.__rect.y
         self.__former_moves = kwargs
@@ -156,7 +156,12 @@ class Drawable(Sprite, ThemedObject):
         self.__former_moves = {"x": self.__x, "y": self.__y}
 
     def animate_move(self, master, speed=1, milliseconds=10, at_every_frame=None, **position) -> None:
-        self.__animation.move(speed=speed, milliseconds=milliseconds, **position).start(master, at_every_frame)
+        self.__animation.move(speed=speed, milliseconds=milliseconds, **position)
+        self.__animation.start(master, at_every_frame)
+
+    def animate_move_in_background(self, master, speed=1, milliseconds=10, at_every_frame=None, after_animation=None, **position) -> None:
+        self.__animation.move(speed=speed, milliseconds=milliseconds, **position)
+        self.__animation.start_in_background(master, at_every_frame, after_animation)
 
     def rotate(self, angle: float) -> None:
         angle %= 360
@@ -173,8 +178,13 @@ class Drawable(Sprite, ThemedObject):
         self.center = rect.center
 
     def animate_rotate(self, master, angle: float, offset=1, point=None, milliseconds=10, at_every_frame=None) -> None:
-        self.__animation.rotate(angle=angle, offset=offset, point=point, milliseconds=milliseconds).start(master, at_every_frame)
-    
+        self.__animation.rotate(angle=angle, offset=offset, point=point, milliseconds=milliseconds)
+        self.__animation.start(master, at_every_frame)
+
+    def animate_rotate_in_background(self, master, angle: float, offset=1, point=None, milliseconds=10, at_every_frame=None, after_animation=None) -> None:
+        self.__animation.rotate(angle=angle, offset=offset, point=point, milliseconds=milliseconds)
+        self.__animation.start_in_background(master, at_every_frame, after_animation)
+
     @staticmethod
     def surface_rotate(surface: pygame.Surface, rect: pygame.Rect, angle: float, point: Union[Tuple[int, int], Vector2]) -> Tuple[pygame.Surface, pygame.Rect]:
         offset = Vector2(rect.center) - Vector2(point)
@@ -254,11 +264,21 @@ class Drawable(Sprite, ThemedObject):
         else:
             self.__valid_size = True
 
-    def animate_resize_width(self, master, width: int, offset=1, milliseconds=10, at_every_frame=None) -> None:
-        self.__animation.scale_width(width=width, offset=offset, milliseconds=milliseconds).start(master, at_every_frame)
+    def animate_scale_width(self, master, width: int, offset=1, milliseconds=10, at_every_frame=None) -> None:
+        self.__animation.scale_width(width=width, offset=offset, milliseconds=milliseconds)
+        self.__animation.start(master, at_every_frame)
 
-    def animate_resize_height(self, master, height: int, offset=1, milliseconds=10, at_every_frame=None) -> None:
-        self.__animation.scale_height(height=height, offset=offset, milliseconds=milliseconds).start(master, at_every_frame)
+    def animate_scale_width_in_background(self, master, width: int, offset=1, milliseconds=10, at_every_frame=None, after_animation=None) -> None:
+        self.__animation.scale_width(width=width, offset=offset, milliseconds=milliseconds)
+        self.__animation.start_in_background(master, at_every_frame)
+
+    def animate_scale_height(self, master, height: int, offset=1, milliseconds=10, at_every_frame=None) -> None:
+        self.__animation.scale_height(height=height, offset=offset, milliseconds=milliseconds)
+        self.__animation.start(master, at_every_frame)
+
+    def animate_scale_height_in_background(self, master, height: int, offset=1, milliseconds=10, at_every_frame=None, after_animation=None) -> None:
+        self.__animation.scale_height(height=height, offset=offset, milliseconds=milliseconds)
+        self.__animation.start_in_background(master, at_every_frame, after_animation)
 
     animation = property(lambda self: self.__animation)
 
@@ -396,7 +416,7 @@ class AnimationScaleSize(AbstractAnimationClass):
         self.drawable[self.__field] = self.__size
 
 class AnimationScaleWidth(AnimationScaleSize):
-    
+
     def __init__(self, drawable: Drawable, milliseconds: int, width: int, offset=1):
         super().__init__(drawable, milliseconds, "width", width, offset=offset)
 
@@ -412,20 +432,25 @@ class Animation:
         self.__animations_order = ["scale_width", "scale_height", "rotate", "move"]
         self.__animations = dict.fromkeys(self.__animations_order)
         self.__clock = pygame.time.Clock()
+        self.__window_callback = None
 
     def move(self, speed=1, milliseconds=10, **position):
+        self.stop()
         self.__animations["move"] = AnimationMove(self.__drawable, milliseconds, speed=speed, **position)
         return self
 
     def rotate(self, angle: float, offset=1, point=None, milliseconds=10):
+        self.stop()
         self.__animations["rotate"] = AnimationRotation(self.__drawable, milliseconds, angle, offset=offset, point=point)
         return self
 
     def scale_width(self, width: int, offset=1, milliseconds=10):
+        self.stop()
         self.__animations["scale_width"] = AnimationScaleWidth(self.__drawable, milliseconds, width, offset=offset)
         return self
 
     def scale_height(self, height: int, offset=1, milliseconds=10):
+        self.stop()
         self.__animations["scale_height"] = AnimationScaleHeight(self.__drawable, milliseconds, height, offset=offset)
         return self
 
@@ -441,6 +466,10 @@ class Animation:
     def __only_move_animation(self) -> bool:
         return (isinstance(self.__animations["move"], AbstractAnimationClass) and all(not isinstance(anim, AbstractAnimationClass) for name, anim in self.__animations.items() if name != "move"))
 
+    def __clear(self) -> None:
+        for key in self.__animations:
+            self.__animations[key] = None
+
     def start(self, master, at_every_frame=None) -> None:
         default_image = self.__drawable.image
         default_pos = self.__drawable.center
@@ -455,12 +484,47 @@ class Animation:
             if callable(at_every_frame):
                 at_every_frame()
             master.draw_and_refresh(pump=True)
-            self.__drawable.image = default_image
+            if not only_move:
+                self.__drawable.image = default_image
             self.__drawable.center = default_pos
         for animation in self.__iter_animations():
             animation.default()
         if callable(at_every_frame):
             at_every_frame()
         master.draw_and_refresh()
-        for key in self.__animations:
-            self.__animations[key] = None
+        self.__clear()
+
+    def start_in_background(self, master, at_every_frame=None, after_animation=None) -> None:
+        default_image = self.__drawable.image
+        default_pos = self.__drawable.center
+        only_move = self.__only_move_animation()
+        self.__start_window_callback(master, at_every_frame, after_animation, default_image, default_pos, only_move)
+
+    def __start_window_callback(self, master, at_every_frame: Optional[Callable[..., Any]], after_animation: Optional[Callable[..., Any]],
+                                default_image: pygame.Surface, default_pos: Tuple[int, int], only_move: bool) -> None:
+        if not only_move:
+            self.__drawable.image = default_image
+        self.__drawable.center = default_pos
+        if any(animation.started() for animation in self.__iter_animations()):
+            for animation in self.__iter_animations():
+                if animation.started():
+                    animation()
+                else:
+                    animation.default()
+            if callable(at_every_frame):
+                at_every_frame()
+            self.__window_callback = master.after(0, lambda: self.__start_window_callback(master, at_every_frame, after_animation, default_image, default_pos, only_move))
+        else:
+            for animation in self.__iter_animations():
+                animation.default()
+            if callable(at_every_frame):
+                at_every_frame()
+            self.stop()
+            if callable(after_animation):
+                after_animation()
+
+    def stop(self) -> None:
+        if self.__window_callback is not None:
+            self.__window_callback.kill()
+            self.__window_callback = None
+            self.__clear()

@@ -1,12 +1,12 @@
 # -*- coding: Utf-8 -*
 
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Callable
 import pygame
 from pygame.math import Vector2
 from .drawable import Drawable
 from .colors import TRANSPARENT, BLACK
 from .surface import create_surface
-from .gradients import horizontal
+from .gradients import horizontal, vertical, radial, squared
 
 class Shape(Drawable, use_parent_theme=False):
 
@@ -249,7 +249,7 @@ class CircleShape(Shape):
         self.__update_on_resize()
 
     def __update_on_resize(self) -> None:
-        self.__radius = self.width // 2
+        self.__radius = min(self.width // 2, self.height // 2)
         self.shape_update()
 
     draw_top_left = property(
@@ -269,15 +269,20 @@ class CircleShape(Shape):
         lambda self, value: self.config(draw_bottom_right=value)
     )
 
-class HorizontalGradientShape(Drawable, use_parent_theme=False):
+class GradientShape(Drawable, use_parent_theme=False):
 
-    def __init__(self, width: int, height: int, left_color: pygame.Color, right_color: pygame.Color):
+    TYPE_HORIZONTAL = horizontal
+    TYPE_VERTICAL = vertical
+    TYPE_RADIAL = radial
+    TYPE_SQUARED = squared
+
+    def __init__(self, left_color: pygame.Color, right_color: pygame.Color, gradient_type: Callable[..., None]):
         Drawable.__init__(self)
         self.__left_color = TRANSPARENT
         self.__right_color = TRANSPARENT
+        self.__gradient_type = gradient_type
         self.left_color = left_color
         self.right_color = right_color
-        self.set_size(width, height)
 
     @property
     def left_color(self) -> pygame.Color:
@@ -301,7 +306,11 @@ class HorizontalGradientShape(Drawable, use_parent_theme=False):
         if self.w > 0 and self.h > 0:
             start_color = (self.left_color.r, self.left_color.g, self.left_color.b, self.left_color.a)
             end_color = (self.right_color.r, self.right_color.g, self.right_color.b, self.right_color.a)
-            self.image = horizontal(self.size, start_color, end_color)
+            if self.__gradient_type == self.TYPE_RADIAL:
+                size = min(self.width // 2, self.height // 2)
+            else:
+                size = self.size
+            self.image = self.__gradient_type(size, start_color, end_color)
 
     def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
         Drawable.set_size(self, *size, smooth=False)
@@ -314,3 +323,54 @@ class HorizontalGradientShape(Drawable, use_parent_theme=False):
     def set_height(self, height: float, smooth=True) -> None:
         Drawable.set_height(self, height, smooth=False)
         self.__update_image()
+
+class HorizontalGradientShape(GradientShape, use_parent_theme=False):
+
+    def __init__(self, width: int, height: int, left_color: pygame.Color, right_color: pygame.Color):
+        super().__init__(left_color, right_color, GradientShape.TYPE_HORIZONTAL)
+        self.set_size(width, height)
+
+class VerticalGradientShape(GradientShape, use_parent_theme=False):
+
+    def __init__(self, width: int, height: int, left_color: pygame.Color, right_color: pygame.Color):
+        super().__init__(left_color, right_color, GradientShape.TYPE_VERTICAL)
+        self.set_size(width, height)
+
+class SquaredGradientShape(GradientShape, use_parent_theme=False):
+
+    def __init__(self, width: int, height: int, left_color: pygame.Color, right_color: pygame.Color):
+        super().__init__(left_color, right_color, GradientShape.TYPE_SQUARED)
+        self.set_size(width, height)
+
+class RadialGradientShape(GradientShape, use_parent_theme=False):
+
+    def __init__(self, radius: int, left_color: pygame.Color, right_color: pygame.Color):
+        super().__init__(left_color, right_color, GradientShape.TYPE_RADIAL)
+        self.__radius = 0
+        self.radius = radius
+
+    @property
+    def radius(self) -> int:
+        return self.__radius
+
+    @radius.setter
+    def radius(self, value: int) -> None:
+        self.__radius = int(value)
+        if self.__radius < 0:
+            self.__radius = 0
+        GradientShape.set_size(self, self.__radius * 2)
+
+    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
+        GradientShape.set_size(self, *size, smooth=smooth)
+        self.__update_on_resize()
+
+    def set_width(self, width: float, smooth=True)-> None:
+        GradientShape.set_width(self, width, smooth=smooth)
+        self.__update_on_resize()
+
+    def set_height(self, height: float, smooth=True) -> None:
+        GradientShape.set_height(self, height, smooth=smooth)
+        self.__update_on_resize()
+
+    def __update_on_resize(self) -> None:
+        self.__radius = min(self.width // 2, self.height // 2)

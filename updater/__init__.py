@@ -94,22 +94,20 @@ class Updater(tk.Tk):
         self.label["text"] = str()
         self.progress["mode"] = "determinate"
         self.progress["value"] = self.progress["maximum"] = 0
-        self.after(100, lambda: self.__start_install(release))
-        self.mainloop()
-        os.execv(self.executable, [self.executable])
+        archive_to_download = self.__search_archive_assets(release)
+        if archive_to_download is not None:
+            self.after(100, lambda: self.__start_install(release))
+            self.mainloop()
+            os.execv(self.executable, [self.executable])
 
     @threaded_function
     @showerror_exception
-    def __start_install(self, release: dict) -> None:
-        archive_to_download = self.__search_archive_assets(release)
-        if archive_to_download is None:
-            showerror("No assets", "There is no assets for this version or not for your platform")
+    def __start_install(self, asset: dict) -> None:
+        archive_filepath = self.__download(asset)
+        if archive_filepath is None:
+            showerror("Error download", "Can't download update")
         else:
-            archive_filepath = self.__download(archive_to_download)
-            if archive_filepath is None:
-                showerror("Error download", "Can't download update")
-            else:
-                self.__extract(archive_filepath)
+            self.__extract(archive_filepath)
         self.quit()
 
     def __search_archive_assets(self, release: dict) -> dict:
@@ -153,10 +151,11 @@ class Updater(tk.Tk):
                     self.progress["value"] = i
         self.label["text"] = "Deleting archive"
         self.progress["mode"] = "indeterminate"
-        self.progress.start()
+        self.progress["maximum"] = 20
+        self.progress.start(10)
         os.remove(archive)
-        self.protocol("WM_DELETE_WINDOW", self.quit)
         self.progress.stop()
+        self.protocol("WM_DELETE_WINDOW", self.quit)
 
     def __check_github_api_rate_limit(self) -> bool:
         url = "https://api.github.com/rate_limit"

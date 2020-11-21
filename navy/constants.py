@@ -1,11 +1,9 @@
 # -*- coding: Utf-8
 
-import os
-import sys
 from my_pygame import set_constant_directory, set_constant_file
 from my_pygame import Resources
 
-WINDOW_CONFIG_FILE = os.path.join(sys.path[0], "window", "navy.ini")
+WINDOW_CONFIG_FILE = set_constant_file("window", "navy.ini", raise_error=False)
 
 RESOURCES = Resources()
 

@@ -19,7 +19,18 @@ def main():
     parser.add_argument("game", nargs="?")
     parser.add_argument("--update", action="store_true")
     parser.add_argument("--install", metavar="version")
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
+
+    if args.game is not None:
+        if args.game not in ALL_GAMES:
+            print("Unknown game '{}'".format(args.game))
+            print("The 'game' parameter must be one of these:")
+            for game in ALL_GAMES:
+                print(" - {}".format(game))
+            return 1
+        MainWindow = ALL_GAMES[args.game]
+        window = MainWindow()
+        return window.mainloop()
 
     updater = Updater()
 
@@ -27,18 +38,7 @@ def main():
         updater.install_latest_version(__version__)
     elif args.install:
         updater.install_version(args.install)
-
-    if args.game is None:
-        MainWindow = PyGameCase
-    elif args.game in ALL_GAMES:
-        MainWindow = ALL_GAMES[args.game]
-    else:
-        print("Unknown game '{}'".format(args.game))
-        print("The 'game' parameter must be one of these:")
-        for game in ALL_GAMES:
-            print(" - {}".format(game))
-        return 1
-    window = MainWindow()
+    window = PyGameCase()
     return window.mainloop()
 
 if __name__ == "__main__":

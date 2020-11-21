@@ -138,7 +138,10 @@ class ShipSetup(Image):
             if box is None or (box.ship is not None and box.ship != self):
                 return False
             new_cases.append(box)
-        self.animate_orient_set(new_orient, first_box, new_cases)
+        if all(self.master.valid_box(self, box) for box in new_cases):
+            self.animate_orient_set(new_orient, first_box, new_cases)
+        else:
+            self.__place_ship(self.boxes_covered)
         return True
 
     def __place_ship(self, boxes: Sequence[BoxSetup]):
@@ -150,7 +153,7 @@ class ShipSetup(Image):
         height = bottom - top
         rect = pygame.Rect(left, top, width, height)
         self.center = rect.center
-        self.boxes_covered = boxes
+        self.boxes_covered = list(boxes)
 
 class EnemyQuitGame(Window):
     def __init__(self, master):
