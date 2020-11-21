@@ -4,7 +4,7 @@ import os
 import sys
 import argparse
 import packaging.version
-from py_game_case import PyGameCase, __version__
+from py_game_case import PyGameCase, __version__ as actual_version
 from navy import NavyWindow
 from four_in_a_row import FourInARowWindow
 from updater import Updater
@@ -21,13 +21,7 @@ def main():
     parser.add_argument("--install", metavar="version")
     args, unknown = parser.parse_known_args()
 
-    if args.game is not None:
-        if args.game not in ALL_GAMES:
-            print("Unknown game '{}'".format(args.game))
-            print("The 'game' parameter must be one of these:")
-            for game in ALL_GAMES:
-                print(" - {}".format(game))
-            return 1
+    if args.game in ALL_GAMES:
         MainWindow = ALL_GAMES[args.game]
         window = MainWindow()
         return window.mainloop()
@@ -35,7 +29,7 @@ def main():
     updater = Updater()
 
     if args.update:
-        updater.install_latest_version(__version__)
+        updater.install_latest_version(actual_version)
     elif args.install:
         updater.install_version(args.install)
     window = PyGameCase()
