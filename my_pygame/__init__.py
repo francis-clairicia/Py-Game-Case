@@ -13,6 +13,7 @@ from .progress import ProgressBar
 from .scale import Scale
 from .checkbox import CheckBox
 from .list import DrawableList, DrawableListHorizontal, DrawableListVertical, ButtonListHorizontal, ButtonListVertical
+from .grid import Grid
 from .form import Form
 from .sprite import Sprite
 from .clock import Clock

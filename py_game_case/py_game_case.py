@@ -112,9 +112,9 @@ class PyGameCase(MainWindow):
                 self, lambda game_id=game_id: self.show_preview(game_id), text=game_name,
                 callback=lambda game_id=game_id: self.launch_game(game_id)
             )
-            self.buttons_game_launch.add(button)
             self.image_game_preview.add_sprite(game_id, RESOURCES.IMG[game_id], size=self.size)
             self.buttons_game_dict[game_id] = button
+        self.buttons_game_launch.add_multiple(self.buttons_game_dict.values())
         self.game_id = None
         self.game_launched_processes = list()
 

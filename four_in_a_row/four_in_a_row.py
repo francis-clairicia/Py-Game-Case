@@ -35,13 +35,13 @@ class AILevelSelectorSection(Section):
             "y_add_size": -30
         }
         disabled_levels = [FourInARowAI.HARD]
-        for level in FourInARowAI.get_available_levels():
-            self.buttons_ai_level.add(
-                Button(
-                    self, text=string.capwords(level), theme=["section"], **theme,
-                    callback=lambda ai_level=level: self.play(ai_level), state=Button.DISABLED if level in disabled_levels else Button.NORMAL
-                )
+        self.buttons_ai_level.add_multiple(
+            Button(
+                self, text=string.capwords(level), theme=["section"], **theme,
+                callback=lambda ai_level=level: self.play(ai_level), state=Button.DISABLED if level in disabled_levels else Button.NORMAL
             )
+            for level in FourInARowAI.get_available_levels()
+        )
 
     def on_start_loop(self) -> None:
         self.buttons_ai_level[0].focus_set()
@@ -62,9 +62,9 @@ class LocalPlayingSection(Section):
 
     def __init__(self, master, gameplay: FourInARowGameplay):
         Section.__init__(self, master, "Local Multiplaying", gameplay)
-        self.form = Form(offset=20)
-        self.form.add_entry("P1", Text("P1 Name:"), Entry(self))
-        self.form.add_entry("P2", Text("P2 Name:"), Entry(self))
+        self.form = Form(self)
+        self.form.add_entry("P1", Text("P1 Name:", theme="form"), Entry(self))
+        self.form.add_entry("P2", Text("P2 Name:", theme="form"), Entry(self))
         self.button_play = Button(self, "Play", theme=["option", "section"], callback=self.play)
 
     def on_start_loop(self) -> None:
@@ -81,8 +81,8 @@ class LocalPlayingSection(Section):
         self.button_play.set_obj_on_side(on_top=self.form[-1])
 
     def play(self) -> None:
-        player_1_name = self.form.get("P1") or None
-        player_2_name = self.form.get("P2") or None
+        player_1_name = self.form.get_value("P1") or None
+        player_2_name = self.form.get_value("P2") or None
         self.gameplay.start(LOCAL_PLAYER, player_name=player_1_name, enemy_name=player_2_name)
         self.stop()
 
@@ -90,8 +90,8 @@ class LANPlayingP1(Section):
 
     def __init__(self, master, gameplay: FourInARowGameplay):
         Section.__init__(self, master, "Play as P1", gameplay)
-        self.form = Form()
-        self.form.add_entry("P1", Text("Your Name:"), Entry(self))
+        self.form = Form(self)
+        self.form.add_entry("P1", Text("Your Name:", theme="form"), Entry(self))
         self.button_start_server = Button(self, theme=["option", "section"])
         self.text_game_status = Text(font=RESOURCES.font("heavy", 20), shadow_x=1, shadow_y=1)
         self.text_server_ip = Text(font=RESOURCES.font("afterglow", 45), shadow_x=2, shadow_y=1)
@@ -107,14 +107,14 @@ class LANPlayingP1(Section):
 
     def update(self) -> None:
         if not self.client_socket.connected():
-            self.button_start_server.state = Button.NORMAL if self.form.get("P1") else Button.DISABLED
+            self.button_start_server.state = Button.NORMAL if self.form.get_value("P1") else Button.DISABLED
             self.form.get_entry("P1").state = Entry.NORMAL
         else:
             self.button_start_server.state = Button.NORMAL
             self.form.get_entry("P1").state = Entry.DISABLED
             if self.get_server_clients_count() == 2:
                 self.set_server_listen(0)
-                self.gameplay.start(LAN_PLAYER, player=1, player_name=self.form.get("P1"))
+                self.gameplay.start(LAN_PLAYER, player=1, player_name=self.form.get_value("P1"))
                 self.stop()
 
     def on_start_loop(self) -> None:
@@ -158,12 +158,12 @@ class LANPlayingP2(Section):
 
     def __init__(self, master, gameplay: FourInARowGameplay):
         Section.__init__(self, master, "Play as P2", gameplay)
-        self.form = Form(offset=20)
-        self.form.add_entry("name", Text("Your Name:"), Entry(self))
-        self.form.add_entry("IP", Text("IP address:"), Entry(self, width=15))
-        self.form.add_entry("port", Text("Port of connection:"), Entry(self, width=15))
+        self.form = Form(self)
+        self.form.add_entry("name", Text("Your Name:", theme="form"), Entry(self))
+        self.form.add_entry("IP", Text("IP address:", theme="form"), Entry(self, width=15))
+        self.form.add_entry("port", Text("Port of connection:", theme="form"), Entry(self, width=15))
         self.button_connect = Button(self, "Connect to P1", theme=["option", "section"], callback=self.connection)
-        self.text_game_status = Text(font=("heavy", 30), shadow_x=1, shadow_y=1)
+        self.text_game_status = Text(font=RESOURCES.font("heavy", 30), shadow_x=1, shadow_y=1)
 
     def place_objects(self) -> None:
         Section.place_objects(self)
@@ -172,7 +172,7 @@ class LANPlayingP2(Section):
         self.button_connect.move(centerx=self.frame.centerx, bottom=self.frame.bottom - 10)
 
     def update(self) -> None:
-        self.button_connect.state = Button.NORMAL if self.form.get("name") else Button.DISABLED
+        self.button_connect.state = Button.NORMAL if self.form.get_value("name") else Button.DISABLED
 
     def on_start_loop(self) -> None:
         self.form.get_entry("name").focus_set()
@@ -191,10 +191,10 @@ class LANPlayingP2(Section):
         self.text_game_status.show()
         self.text_game_status.message = "Connection..."
         self.draw_and_refresh()
-        if not self.connect_to_server(self.form.get("IP"), int(self.form.get("port")), 3):
+        if not self.connect_to_server(self.form.get_value("IP"), int(self.form.get_value("port")), 3):
             self.text_game_status.message = "Connection failed. Try again."
         else:
-            self.gameplay.start(LAN_PLAYER, player=2, player_name=self.form.get("name"))
+            self.gameplay.start(LAN_PLAYER, player=2, player_name=self.form.get_value("name"))
             self.stop()
 
 class FourInARowWindow(MainWindow):
@@ -213,6 +213,9 @@ class FourInARowWindow(MainWindow):
             "shadow": True,
             "shadow_x": 3,
             "shadow_y": 3
+        })
+        Text.set_theme("form", {
+            "font": RESOURCES.font("heavy", 40),
         })
         Button.set_default_theme("default")
         Button.set_theme("default", {

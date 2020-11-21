@@ -7,7 +7,7 @@ from typing import Tuple, Sequence, Dict, Any
 import pygame
 from my_pygame import Window
 from my_pygame import Image, ImageButton, Button, RectangleShape, Text
-from my_pygame import DrawableListHorizontal, DrawableListVertical
+from my_pygame import DrawableListHorizontal, DrawableListVertical, Grid
 from my_pygame import GREEN, GREEN_DARK, GREEN_LIGHT, WHITE, YELLOW, RED, TRANSPARENT
 from my_pygame import CountDown
 from .constants import RESOURCES, NB_LINES_BOXES, NB_COLUMNS_BOXES, BOX_SIZE, SHIPS
@@ -203,12 +203,11 @@ class NavySetup(Window):
         self.count_down = CountDown(self, 60, "Time left: {seconds}", font=(None, 70), color=WHITE)
         self.start_count_down = lambda: self.count_down.start(at_end=self.timeout) if self.client_socket.connected() else None
         self.button_back = ImageButton(self, RESOURCES.IMG["arrow_blue"], rotate=180, size=50, callback=self.stop)
-        self.navy_grid = DrawableListVertical(offset=0, bg_color=(0, 157, 255))
-        for i in range(NB_LINES_BOXES):
-            box_line = DrawableListHorizontal(offset=0)
-            for j in range(NB_COLUMNS_BOXES):
-                box_line.add(BoxSetup(self, size=BOX_SIZE, pos=(i, j)))
-            self.navy_grid.add(box_line)
+        self.navy_grid = Grid(self, bg_color=(0, 157, 255))
+        self.navy_grid.place_multiple({
+            (i, j): BoxSetup(self, size=BOX_SIZE, pos=(i, j))
+            for i in range(NB_LINES_BOXES) for j in range(NB_COLUMNS_BOXES)
+        })
         self.ships_list = DrawableListVertical(offset=70, justify="left")
         for ship_name, ship_infos in SHIPS.items():
             ship_line = DrawableListHorizontal(offset=ship_infos["offset"])

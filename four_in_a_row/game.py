@@ -50,8 +50,7 @@ class ColumnGrid(Clickable, DrawableListVertical):
     def __init__(self, master, width: int, height: int, column: int):
         row_height = height // NB_ROWS
         DrawableListVertical.__init__(self, offset=0)
-        for row in range(NB_ROWS):
-            self.add(Box(width, row_height, row, column))
+        self.add_multiple(Box(width, row_height, row, column) for row in range(NB_ROWS))
         Clickable.__init__(self, master, callback=lambda col=column: master.play(col))
 
     @property
@@ -99,13 +98,12 @@ class ColumnGrid(Clickable, DrawableListVertical):
         for box in self.available_boxes:
             box.circle.color = box.default_circle_color
 
-class Grid(ButtonListHorizontal):
+class FourInARowGrid(ButtonListHorizontal):
 
     def __init__(self, master, width: int, height: int):
         ButtonListHorizontal.__init__(self, offset=0, bg_color=BLUE, make_uniform_size=False)
         column_width = width // NB_COLUMNS
-        for column in range(NB_COLUMNS):
-            self.add(ColumnGrid(master, column_width, height, column))
+        self.add_multiple(ColumnGrid(master, column_width, height, column) for column in range(NB_COLUMNS))
         self.master = master
 
     @property
@@ -169,7 +167,7 @@ class FourInARowGameplay(Window):
         self.logo = Image(RESOURCES.IMG["logo"])
         arrow = pygame.transform.flip(RESOURCES.IMG["arrow"], True, False)
         self.button_back = ImageButton(self, img=arrow, width=100, callback=self.stop, active_offset=(0, 5), highlight_color=YELLOW)
-        self.grid = Grid(self, self.width / 2, self.height * 0.75)
+        self.grid = FourInARowGrid(self, self.width / 2, self.height * 0.75)
         self.__player_turn = 0
         self.player_who_start_first = 0
         self.player = 0

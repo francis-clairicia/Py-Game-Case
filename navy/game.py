@@ -7,7 +7,7 @@ import random
 import json
 import pygame
 from typing import Sequence, Dict, Any, Tuple, Union
-from my_pygame import Window, DrawableList, DrawableListHorizontal, DrawableListVertical
+from my_pygame import Window, DrawableList, Grid
 from my_pygame import Image, ImageButton, Text, RectangleShape, Button, Sprite
 from my_pygame import GREEN, GREEN_DARK, GREEN_LIGHT, BLACK, WHITE, YELLOW, TRANSPARENT, RED, RED_DARK
 from my_pygame import ClientSocket
@@ -95,7 +95,7 @@ class Ship(Image):
         self.center = rect.center
         self.boxes_covered = boxes
 
-class Navy(DrawableListVertical):
+class Navy(Grid):
 
     BOX_NO_HIT = 0
     BOX_HATCH = 1
@@ -103,14 +103,12 @@ class Navy(DrawableListVertical):
     BOX_SHIP_DESTROYED = 3
 
     def __init__(self, master):
-        DrawableListVertical.__init__(self, offset=0, bg_color=(0, 157, 255))
+        Grid.__init__(self, master, bg_color=(0, 157, 255))
         self.master = master
-        for i in range(NB_LINES_BOXES):
-            box_line = DrawableListHorizontal(offset=0)
-            for j in range(NB_COLUMNS_BOXES):
-                box = Box(master, navy=self, size=BOX_SIZE, pos=(i, j))
-                box_line.add(box)
-            self.add(box_line)
+        self.place_multiple({
+            (i, j): Box(master, navy=self, size=BOX_SIZE, pos=(i, j))
+            for i in range(NB_LINES_BOXES) for j in range(NB_COLUMNS_BOXES)
+        })
         self.ships_list = DrawableList()
         self.box_hit_img = DrawableList()
 
@@ -136,6 +134,8 @@ class Navy(DrawableListVertical):
         return navy_map
 
     def after_drawing(self, surface: pygame.Surface) -> None:
+        super().after_drawing(surface)
+        self.move()
         self.ships_list.draw(surface)
         self.box_hit_img.draw(surface)
 
@@ -168,7 +168,7 @@ class Navy(DrawableListVertical):
         return self.ships_list.drawable
 
     def move(self, **kwargs):
-        DrawableListVertical.move(self, **kwargs)
+        Grid.move(self, **kwargs)
         for ship in self.ships:
             ship.place_ship(list(filter(lambda box: box.pos in ship.boxes_pos, self.boxes)))
 

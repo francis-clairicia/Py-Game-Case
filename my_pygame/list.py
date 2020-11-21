@@ -1,9 +1,10 @@
 # -*- coding: Utf-8 -*
 
-from typing import Sequence, Iterator, Any, Union, Type
+from typing import Sequence, Iterable, Iterator, Any, Union, Type
 import pygame
 from .drawable import Drawable
 from .focusable import Focusable
+from .grid import Grid
 from .shape import RectangleShape
 from .colors import TRANSPARENT
 
@@ -45,7 +46,10 @@ class DrawableList:
         return self.__bg_color
 
     def add(self, obj: Drawable, *objs: Drawable) -> None:
-        for obj in [obj, *objs]:
+        self.add_multiple([obj, *objs])
+
+    def add_multiple(self, iterable_of_objects: Iterable[Drawable]) -> None:
+        for obj in iterable_of_objects:
             if isinstance(obj, (Drawable, DrawableList)) and obj not in self.__list:
                 self.__list.append(obj)
 
@@ -77,7 +81,7 @@ class DrawableList:
         self.__list.insert(new_pos, obj)
 
     def __update_index(self) -> None:
-        size = len(self.focusable)
+        size = len(self.__get_all_focusable_objects_including_grid_cells())
         if self.__index >= size:
             self.__index = size - 1
 
@@ -112,11 +116,11 @@ class DrawableList:
     def focus_get(self) -> Focusable:
         if self.__index < 0:
             return None
-        return self.focusable[self.__index]
+        return self.__get_all_focusable_objects_including_grid_cells()[self.__index]
 
     def focus_next(self) -> None:
-        if any(obj.take_focus() for obj in self.focusable):
-            size = len(self.focusable)
+        if any(obj.take_focus() for obj in self.__get_all_focusable_objects_including_grid_cells()):
+            size = len(self.__get_all_focusable_objects_including_grid_cells())
             while True:
                 self.__index = (self.__index + 1) % size
                 obj = self.focus_get()
@@ -138,18 +142,18 @@ class DrawableList:
                 self.set_focus(obj)
 
     def set_focus(self, obj: Focusable) -> None:
-        if obj is not None and obj not in self.focusable:
+        if obj is not None and obj not in self.__get_all_focusable_objects_including_grid_cells():
             return
-        for obj_f in self.focusable:
+        for obj_f in self.__get_all_focusable_objects_including_grid_cells():
             obj_f.focus = False
         if isinstance(obj, Focusable):
             obj.focus = True
-            self.__index = self.focusable.index(obj)
+            self.__index = self.__get_all_focusable_objects_including_grid_cells().index(obj)
         else:
             self.__index = -1
 
     def remove_focus(self, obj: Focusable) -> None:
-        if obj not in self.focusable:
+        if obj not in self.__get_all_focusable_objects_including_grid_cells():
             return
         obj.focus = False
         if self.focus_get() == obj:
@@ -195,8 +199,19 @@ class DrawableList:
         for obj in self.__list:
             if isinstance(obj, obj_type):
                 obj_list.append(obj)
-            if isinstance(obj, DrawableList):
+            if isinstance(obj, (DrawableList, Grid)):
                 obj_list.extend(obj.find_objects(obj_type))
+        return obj_list
+
+    def __get_all_focusable_objects_including_grid_cells(self) -> Sequence[Focusable]:
+        obj_list = list()
+        for obj in self.__list:
+            if isinstance(obj, Focusable):
+                obj_list.append(obj)
+            if isinstance(obj, (DrawableList, Grid)):
+                if isinstance(obj, Grid):
+                    obj_list.extend(obj.cells)
+                obj_list.extend(obj.find_objects(Focusable))
         return obj_list
 
     left = property(lambda self: self.rect.left, lambda self, value: self.move(left=value))
@@ -277,8 +292,8 @@ class AbstractDrawableListAligned(DrawableList):
         for obj_list in AbstractDrawableListAligned.__trace:
             AbstractDrawableListAligned.__align_all_objects(obj_list)
 
-    def add(self, obj: Drawable, *objs: Drawable) -> None:
-        DrawableList.add(self, obj, *objs)
+    def add_multiple(self, iterable_of_objects: Iterable[Drawable]) -> None:
+        DrawableList.add_multiple(self, iterable_of_objects)
         self.__align_all_objects()
 
     def remove(self, obj: Drawable, *objs: Drawable) -> None:
@@ -326,12 +341,12 @@ class ButtonListVertical(DrawableListVertical):
     def __getitem__(self, index: int) -> Union[Drawable, Focusable]:
         return DrawableListVertical.__getitem__(self, index)
 
-    def add(self, button: Focusable, *buttons: Focusable) -> None:
-        DrawableListVertical.add(self, button, *buttons)
+    def add_multiple(self, iterable_of_objects: Union[Drawable, Focusable]) -> None:
+        DrawableListVertical.add_multiple(self, iterable_of_objects)
         self.__handle_buttons()
 
     def remove(self, button: Focusable, *buttons: Focusable) -> None:
-        DrawableListVertical.remove(self, button, *buttons)
+        DrawableListVertical.remove(self, *[button, *buttons])
         self.__handle_buttons()
 
     def remove_from_index(self, index: int) -> None:
@@ -388,12 +403,12 @@ class ButtonListHorizontal(DrawableListHorizontal):
     def __getitem__(self, index: int) -> Union[Drawable, Focusable]:
         return DrawableListHorizontal.__getitem__(self, index)
 
-    def add(self, button: Focusable, *buttons: Focusable) -> None:
-        DrawableListHorizontal.add(self, button, *buttons)
+    def add_multiple(self, iterable_of_objects: Union[Drawable, Focusable]) -> None:
+        DrawableListHorizontal.add_multiple(self, iterable_of_objects)
         self.__handle_buttons()
 
     def remove(self, button: Focusable, *buttons: Focusable) -> None:
-        DrawableListHorizontal.remove(self, button, *buttons)
+        DrawableListHorizontal.remove(self, *[button, *buttons])
         self.__handle_buttons()
 
     def remove_from_index(self, index: int) -> None:

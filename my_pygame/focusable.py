@@ -1,5 +1,6 @@
 # -*- coding: Utf-8 -*
 
+from typing import Optional
 import pygame
 from .colors import BLUE
 
@@ -41,7 +42,9 @@ class Focusable:
             if focus:
                 self.on_focus_leave()
 
-    def get_obj_on_side(self, side: str):
+    def get_obj_on_side(self, side: Optional[str] = None):
+        if side is None:
+            return self.__side.copy()
         return self.__side.get(side, None)
 
     def set_obj_on_side(self, on_top=None, on_bottom=None, on_left=None, on_right=None) -> None:
