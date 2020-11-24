@@ -161,7 +161,7 @@ class LANPlayingP2(Section):
         self.form = Form(self)
         self.form.add_entry("name", Text("Your Name:", theme="form"), Entry(self))
         self.form.add_entry("IP", Text("IP address:", theme="form"), Entry(self, width=15))
-        self.form.add_entry("port", Text("Port of connection:", theme="form"), Entry(self, width=15))
+        self.form.add_entry("port", Text("Port:", theme="form"), Entry(self, width=15))
         self.button_connect = Button(self, "Connect to P1", theme=["option", "section"], callback=self.connection)
         self.text_game_status = Text(font=RESOURCES.font("heavy", 30), shadow_x=1, shadow_y=1)
 
@@ -221,7 +221,7 @@ class FourInARowWindow(MainWindow):
             "shadow_y": 3
         })
         Text.set_theme("form", {
-            "font": RESOURCES.font("heavy", 40),
+            "font": RESOURCES.font("heavy", 35),
         })
         Button.set_default_theme("default")
         Button.set_theme("default", {
@@ -259,7 +259,7 @@ class FourInARowWindow(MainWindow):
         Entry.set_default_theme("default")
         Entry.set_theme("default", {
             "width": 12,
-            "font": RESOURCES.font("afterglow", 30),
+            "font": RESOURCES.font("afterglow", 25),
             "highlight_color": BLACK,
             "highlight_thickness": 3
         })

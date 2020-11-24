@@ -9,8 +9,7 @@ class Focusable:
     MODE_MOUSE = "mouse"
     MODE_KEY = "keyboard"
     MODE_JOY = "joystick"
-    MODE = MODE_MOUSE
-    ALL_MODES = [MODE_MOUSE, MODE_KEY, MODE_JOY]
+    __mode = MODE_MOUSE
     ON_LEFT = "on_left"
     ON_RIGHT = "on_right"
     ON_TOP = "on_top"
@@ -25,6 +24,19 @@ class Focusable:
         self.__highlight_color = pygame.Color(highlight_color)
         self.__highlight_thickness = highlight_thickness
         self.__force_use_highlight_thickness = False
+
+    @staticmethod
+    def get_mode() -> str:
+        return Focusable.__mode
+
+    @staticmethod
+    def set_mode(mode: str) -> None:
+        if mode in [Focusable.MODE_MOUSE, Focusable.MODE_KEY, Focusable.MODE_JOY]:
+            Focusable.__mode = mode
+
+    @staticmethod
+    def actual_mode_is(*mode: str) -> bool:
+        return Focusable.get_mode() in mode
 
     def get_obj_on_side(self, side: Optional[str] = None):
         if side is None:

@@ -14,7 +14,7 @@ from .list import DrawableList, AbstractDrawableListAligned
 from .grid import Grid, GridCell
 from .joystick import Joystick, JoystickList
 from .keyboard import Keyboard
-from .cursor import Cursor, SystemCursor
+from .cursor import Cursor
 from .clock import Clock
 from .colors import BLACK, WHITE, BLUE, TRANSPARENT
 from .resources import Resources
@@ -124,7 +124,7 @@ class WindowDrawableList(DrawableList):
             self.set_focus(None)
 
     def focus_mode_update(self) -> None:
-        if Focusable.MODE != Focusable.MODE_MOUSE and self.focus_get() is None:
+        if not Focusable.actual_mode_is(Focusable.MODE_MOUSE) and self.focus_get() is None:
             self.focus_next()
 
     @property
@@ -168,7 +168,7 @@ class Window(object):
     __fps_obj = None
     __joystick = JoystickList()
     __keyboard = Keyboard()
-    __default_cursor = SystemCursor(pygame.SYSTEM_CURSOR_ARROW)
+    __default_cursor = Cursor(pygame.SYSTEM_CURSOR_ARROW)
     __cursor = __default_cursor
     __all_window_event_handler_dict = dict()
     __all_window_key_handler_dict = dict()
@@ -237,7 +237,7 @@ class Window(object):
                 size = (0, 0)
             surface = pygame.display.set_mode(size, flags)
             pygame.event.clear()
-            Window.__size = surface.get_size()
+            Window.__min_size = Window.__size = surface.get_size()
             Window.__flags = flags
             if isinstance(resources, Resources):
                 Window.__resources = resources
@@ -338,7 +338,7 @@ class Window(object):
             self.handle_bg_music()
             self.handle_cursor()
             self.__callback_after.process()
-            if Focusable.MODE == Focusable.MODE_KEY and Window.__all_window_key_enabled and self.__key_enabled:
+            if Focusable.actual_mode_is(Focusable.MODE_KEY, Focusable.MODE_JOY) and Window.__all_window_key_enabled and self.__key_enabled:
                 self.objects.focus_mode_update()
             self.keyboard.update()
             self.update()
@@ -470,13 +470,13 @@ class Window(object):
         Window.__cursor = Window.__default_cursor
 
     @staticmethod
-    def set_temporary_window_cursor(cursor: Union[Cursor, SystemCursor]) -> None:
-        if isinstance(cursor, (Cursor, SystemCursor)):
+    def set_temporary_window_cursor(cursor: Cursor) -> None:
+        if isinstance(cursor, Cursor):
             Window.__cursor = cursor
 
     @staticmethod
-    def set_window_cursor(cursor: Union[Cursor, SystemCursor]):
-        if isinstance(cursor, (Cursor, SystemCursor)):
+    def set_window_cursor(cursor: Cursor):
+        if isinstance(cursor, Cursor):
             Window.__default_cursor = cursor
 
     def __key_handler(self, event: pygame.event.Event) -> None:
@@ -516,12 +516,11 @@ class Window(object):
         self.objects.remove_focus(obj)
 
     def focus_mode(self, mode: str) -> None:
-        if mode in Focusable.ALL_MODES:
-            Focusable.MODE = mode
+        Focusable.set_mode(mode)
 
     def handle_focus(self, event: pygame.event.Event) -> None:
         if event.type in [pygame.KEYDOWN, pygame.JOYHATMOTION]:
-            Focusable.MODE = Focusable.MODE_KEY if event.type == pygame.KEYDOWN else Focusable.MODE_JOY
+            Focusable.set_mode(Focusable.MODE_KEY if event.type == pygame.KEYDOWN else Focusable.MODE_JOY)
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_LEFT, pygame.K_RIGHT] and self.text_input_enabled():
                 return
             if Window.__all_window_key_enabled and self.__key_enabled:
@@ -550,17 +549,13 @@ class Window(object):
                         if value in side_dict:
                             self.objects.focus_obj_on_side(side_dict[value])
         else:
-            Focusable.MODE = Focusable.MODE_MOUSE
+            Focusable.set_mode(Focusable.MODE_MOUSE)
 
     def resize_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.WINDOWEVENT and event.event in [pygame.WINDOWEVENT_RESIZED, pygame.WINDOWEVENT_SIZE_CHANGED, pygame.WINDOWEVENT_MAXIMIZED]:
             if self.width < Window.__min_size[0] or self.height < Window.__min_size[1]:
                 size = (max(self.width, Window.__min_size[0]), max(self.height, Window.__min_size[1]))
                 pygame.display.set_mode(size, flags=Window.__flags)
-            # scale_w = self.surface.get_width() / Window.__size[0]
-            # scale_h = self.surface.get_height() / Window.__size[1]
-            # Drawable.set_default_scale(scale_w, scale_h)
-            # AbstractDrawableListAligned.offset_scale(scale_w, scale_h)
             for window in Window.__all_opened:
                 window.place_objects()
 

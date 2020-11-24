@@ -6,7 +6,7 @@ from .shape import RectangleShape, PolygonShape
 from .clickable import Clickable
 from .window import Window
 from .clock import Clock
-from .cursor import SystemCursor
+from .cursor import Cursor
 from .colors import WHITE, BLACK, GRAY
 
 class Entry(Clickable, RectangleShape):
@@ -19,15 +19,13 @@ class Entry(Clickable, RectangleShape):
             font=font, color=fg, shadow=shadow, shadow_x=shadow_x, shadow_y=shadow_y, shadow_color=shadow_color,
             img=None, compound="left", wrap=0, justify="left"
         )
-        if width <= 0:
-            width = 1
-        self.__nb_chars = width
-        width, height = self.__text.font.size("|" + "0" * (width))
+        self.__nb_chars = max(int(width), 1)
+        width, height = self.__text.font.size("M" * self.__nb_chars)
         self.__cursor_height = height
         RectangleShape.__init__(self, width + 15, height + 10, bg, **kwargs)
         Clickable.__init__(
             self, master, callback=self.start_edit, state=state, highlight_color=highlight_color, highlight_thickness=highlight_thickness,
-            hover_sound=hover_sound, on_click_sound=on_click_sound, disabled_sound=disabled_sound, cursor=SystemCursor(pygame.SYSTEM_CURSOR_IBEAM)
+            hover_sound=hover_sound, on_click_sound=on_click_sound, disabled_sound=disabled_sound, cursor=Cursor(pygame.SYSTEM_CURSOR_IBEAM)
         )
         self.__cursor_line = PolygonShape(fg, outline=2, points=[(0, 0), (0, height)])
         self.__cursor = 0
@@ -37,6 +35,7 @@ class Entry(Clickable, RectangleShape):
         self.__cursor_animation_interval = 0
         self.interval = interval
         self.master.bind_multiple_event([pygame.KEYDOWN, pygame.TEXTINPUT, pygame.TEXTEDITING], self.key_press)
+        self.master.bind_key(pygame.K_ESCAPE, lambda event: self.__escape_key_handler())
         if self.__edit():
             self.start_edit()
 
@@ -87,6 +86,10 @@ class Entry(Clickable, RectangleShape):
 
     def on_focus_leave(self) -> None:
         self.stop_edit()
+
+    def __escape_key_handler(self) -> None:
+        if self.has_focus():
+            self.stop_edit()
 
     def stop_edit(self) -> None:
         self.master.disable_text_input()

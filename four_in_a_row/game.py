@@ -4,7 +4,7 @@ import random
 from typing import Iterator, Sequence, Dict, List, Tuple
 import pygame
 from my_pygame import Window, Dialog, Image, ImageButton, Button, Text, RectangleShape, CircleShape
-from my_pygame import ButtonListHorizontal, ButtonListVertical, DrawableListVertical, Clickable, SystemCursor
+from my_pygame import ButtonListHorizontal, ButtonListVertical, DrawableListVertical, Clickable, Cursor
 from my_pygame import BLUE, WHITE, BLACK, GRAY_DARK, TRANSPARENT, YELLOW, RED, GREEN
 from .constants import RESOURCES, BACKGROUND_COLOR, NB_ROWS, NB_COLUMNS, AI, LOCAL_PLAYER, LAN_PLAYER
 from .ai import FourInARowAI
@@ -51,7 +51,7 @@ class ColumnGrid(Clickable, DrawableListVertical):
         row_height = height // NB_ROWS
         DrawableListVertical.__init__(self, offset=0)
         self.add_multiple(Box(width, row_height, row, column) for row in range(NB_ROWS))
-        Clickable.__init__(self, master, callback=lambda col=column: master.play(col), cursor=SystemCursor(pygame.SYSTEM_CURSOR_ARROW))
+        Clickable.__init__(self, master, callback=lambda col=column: master.play(col), cursor=Cursor(pygame.SYSTEM_CURSOR_ARROW))
 
     @property
     def available_boxes(self) -> Iterator[Box]:

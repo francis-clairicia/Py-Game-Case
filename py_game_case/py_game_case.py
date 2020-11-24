@@ -165,7 +165,7 @@ class PyGameCase(MainWindow):
             if not self.game_launched_processes and not pygame.display.get_active():
                 pass
         if all(not button.has_focus() and not button.hover for button in self.buttons_game_launch) and self.game_id is not None:
-            self.image_game_preview.animate_move_in_background(self, speed=75, right=self.left)
+            self.image_game_preview.animate_move(self, speed=75, right=self.left)
             self.game_id = None
 
     def show_preview(self, game_id: str) -> None:

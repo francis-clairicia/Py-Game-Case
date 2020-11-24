@@ -5,7 +5,7 @@ import pygame
 from pygame.event import Event
 from .focusable import Focusable
 from .window import Window
-from .cursor import Cursor, SystemCursor
+from .cursor import Cursor
 
 class Clickable(Focusable):
 
@@ -115,26 +115,26 @@ class Clickable(Focusable):
                 self.on_leave()
 
     @property
-    def hover_cursor(self) -> Union[Cursor, SystemCursor]:
+    def hover_cursor(self) -> Cursor:
         return self.__hover_cursor
 
     @hover_cursor.setter
-    def hover_cursor(self, cursor: Union[Cursor, SystemCursor]):
-        if isinstance(cursor, (Cursor, SystemCursor)):
+    def hover_cursor(self, cursor: Cursor):
+        if isinstance(cursor, Cursor):
             self.__hover_cursor = cursor
         else:
-            self.__hover_cursor = SystemCursor(pygame.SYSTEM_CURSOR_HAND)
+            self.__hover_cursor = Cursor(pygame.SYSTEM_CURSOR_HAND)
 
     @property
-    def disabled_cursor(self) -> Union[Cursor, SystemCursor]:
+    def disabled_cursor(self) -> Cursor:
         return self.__disabled_cursor
 
     @disabled_cursor.setter
-    def disabled_cursor(self, cursor: Union[Cursor, SystemCursor]):
-        if isinstance(cursor, (Cursor, SystemCursor)):
+    def disabled_cursor(self, cursor: Cursor):
+        if isinstance(cursor, Cursor):
             self.__disabled_cursor = cursor
         else:
-            self.__disabled_cursor = SystemCursor(pygame.SYSTEM_CURSOR_NO)
+            self.__disabled_cursor = Cursor(pygame.SYSTEM_CURSOR_NO)
 
     def play_hover_sound(self) -> None:
         if isinstance(self.hover_sound, pygame.mixer.Sound):
@@ -150,10 +150,10 @@ class Clickable(Focusable):
         mouse_event = pygame.MOUSEBUTTONDOWN if down else pygame.MOUSEBUTTONUP
         key_event = pygame.KEYDOWN if down else pygame.KEYUP
         joy_event = pygame.JOYBUTTONDOWN if down else pygame.JOYBUTTONUP
-        if Focusable.MODE == Focusable.MODE_MOUSE and self.__enable_mouse and hasattr(self, "rect"):
+        if Focusable.actual_mode_is(Focusable.MODE_MOUSE) and self.__enable_mouse and hasattr(self, "rect"):
             if event.type == mouse_event and event.button == 1 and getattr(self, "rect").collidepoint(event.pos):
                 return True
-        elif Focusable.MODE in [Focusable.MODE_KEY, Focusable.MODE_JOY] and self.__enable_key and self.take_focus() and self.has_focus():
+        elif Focusable.actual_mode_is(Focusable.MODE_KEY, Focusable.MODE_JOY) and self.__enable_key and self.take_focus() and self.has_focus():
             if event.type == key_event and event.key == pygame.K_RETURN:
                 return True
             if event.type == joy_event and event.button == 0:
@@ -185,7 +185,7 @@ class Clickable(Focusable):
     def handle_mouse_position(self, mouse_pos: Tuple[int, int]) -> None:
         if not self.__enable_mouse or (hasattr(self, "is_shown") and getattr(self, "is_shown")() is False):
             return
-        if Focusable.MODE == Focusable.MODE_MOUSE:
+        if Focusable.actual_mode_is(Focusable.MODE_MOUSE):
             if hasattr(self, "rect"):
                 self.hover = getattr(self, "rect").collidepoint(mouse_pos)
                 self.on_mouse_motion(mouse_pos)
@@ -213,7 +213,7 @@ class Clickable(Focusable):
         self.set_enabled_key_joy(False)
 
     def focus_update(self) -> None:
-        if Focusable.MODE != Focusable.MODE_MOUSE and self.take_focus():
+        if not Focusable.actual_mode_is(Focusable.MODE_MOUSE) and self.take_focus():
             self.hover = self.has_focus()
 
     def on_change_state(self) -> None:
