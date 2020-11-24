@@ -4,7 +4,7 @@ import socket
 import select
 import pygame
 from typing import Type, Union
-from my_pygame import MainWindow, Window, RectangleShape, Image, Button, DrawableListVertical, ButtonListVertical, Scale, Text, CountDown, Entry
+from my_pygame import MainWindow, Window, RectangleShape, Image, Button, DrawableListVertical, ButtonListVertical, Form, Scale, Text, CountDown, Entry
 from my_pygame import Dialog
 from my_pygame import BLACK, GREEN, GREEN_DARK, GREEN_LIGHT, YELLOW, TRANSPARENT
 from .constants import RESOURCES, WINDOW_CONFIG_FILE
@@ -37,7 +37,7 @@ class PlayerServer(Dialog):
     def __init__(self, master, **kwargs):
         Dialog.__init__(self, master=master, bg_color=GREEN_DARK, **kwargs)
         self.start_game = master.start_game
-        self.text_title = Text("Waiting for Player 2", ("calibri", 50))
+        self.text_title = Text("Waiting for Player 2", font=("calibri", 50))
         self.text_ip_address = Text(font=("calibri", 40))
         self.text_port_of_connection = Text(font=("calibri", 40))
         self.button_cancel = Button(self, "Return to menu", theme="option", callback=self.stop)
@@ -78,11 +78,10 @@ class PlayerClient(Dialog):
     def __init__(self, master, **kwargs):
         Dialog.__init__(self, master=master, bg_color=GREEN_DARK, **kwargs)
         self.start_game = NavySetup(2)
-        self.text_title = Text("Connect to Player 1", ("calibri", 50))
-        self.ip = Entry(self, width=15, font=("calibri", 40), bg=GREEN, highlight_color=YELLOW, outline=2)
-        self.text_ip_address = Text("IP address", ("calibri", 40), YELLOW)
-        self.port = Entry(self, width=15, font=("calibri", 40), bg=GREEN, highlight_color=YELLOW, outline=2)
-        self.text_port_of_connection = Text("Port", ("calibri", 40), YELLOW)
+        self.text_title = Text("Connect to Player 1", font=("calibri", 50))
+        self.form = Form(self)
+        self.form.add_entry("IP", Text("IP address", font=("calibri", 40), color=YELLOW), Entry(self, width=15, font=("calibri", 40), bg=GREEN, highlight_color=YELLOW, outline=2))
+        self.form.add_entry("Port", Text("Port", font=("calibri", 40), color=YELLOW), Entry(self, width=15, font=("calibri", 40), bg=GREEN, highlight_color=YELLOW, outline=2))
         self.text_connection = Text(font=("calibri", 25), color=YELLOW)
         self.text_connection.hide()
         self.button_connect = Button(self, "Connection", theme="option", callback=self.connection)
@@ -96,11 +95,8 @@ class PlayerClient(Dialog):
         self.frame.move(center=self.center)
         self.text_title.move(centerx=self.frame.centerx, top=self.frame.top + 50)
         self.lets_play_countdown.move(center=self.text_title.center)
-        self.ip.move(centerx=self.frame.centerx + self.frame.w // 10, bottom=self.frame.centery - 10)
-        self.text_ip_address.move(centery=self.ip.centery, right=self.ip.left - 10)
-        self.port.move(left=self.ip.left, top=self.ip.bottom + 20)
-        self.text_port_of_connection.move(centery=self.port.centery, right=self.port.left - 10)
-        self.text_connection.move(centerx=self.frame.centerx, top=self.port.bottom + 5)
+        self.form.move(center=self.frame.center)
+        self.text_connection.move(centerx=self.frame.centerx, top=self.form.bottom + 5)
         self.button_connect.move(centerx=self.frame.centerx - (self.frame.width // 4), bottom=self.frame.bottom - 10)
         self.button_cancel.move(centerx=self.frame.centerx + (self.frame.width // 4), bottom=self.frame.bottom - 10)
 
@@ -108,7 +104,13 @@ class PlayerClient(Dialog):
         self.text_connection.show()
         self.text_connection.message = "Connection..."
         self.draw_and_refresh()
-        if not self.connect_to_server(self.ip.get(), int(self.port.get()), 3):
+        try:
+            address = self.form.get("IP")
+            port = int(self.form.get("Port"))
+        except ValueError:
+            self.text_connection.message = "The port of connection must be a number."
+            return
+        if not self.connect_to_server(address, port, 3):
             self.text_connection.message = "Connection failed. Try again."
         else:
             self.text_connection.hide()
@@ -125,7 +127,7 @@ class Options(Dialog):
 
     def __init__(self, master: Window, **kwargs):
         Dialog.__init__(self, master=master, bg_color=GREEN_DARK, **kwargs)
-        self.text_title = Text("Options", ("calibri", 50))
+        self.text_title = Text("Options", font=("calibri", 50))
         params_for_all_scales = {
             "width": 0.45 * self.frame.w,
             "height": 30,

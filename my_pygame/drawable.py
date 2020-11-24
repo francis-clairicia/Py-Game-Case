@@ -475,7 +475,7 @@ class Animation:
         default_pos = self.__drawable.center
         only_move = self.__only_move_animation()
         while any(animation.started() for animation in self.__iter_animations()):
-            self.__clock.tick(master.get_framerate())
+            self.__clock.tick(master.get_fps())
             for animation in self.__iter_animations():
                 if animation.started():
                     animation()

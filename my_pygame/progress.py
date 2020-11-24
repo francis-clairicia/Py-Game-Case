@@ -13,7 +13,7 @@ class ProgressBar(RectangleShape):
     S_RIGHT = "right"
     S_INSIDE = "inside"
 
-    def __init__(self, width: int, height: int, color: pygame.Color, scale_color: pygame.Color, outline=2, from_=0, to=1, default=None, **kwargs):
+    def __init__(self, width: int, height: int, color: pygame.Color, scale_color: pygame.Color, *, outline=2, from_=0, to=1, default=None, **kwargs):
         RectangleShape.__init__(self, width, height, color=TRANSPARENT, outline=outline, **kwargs)
         if to <= from_:
             raise ValueError("end value 'to' must be greather than 'from'")

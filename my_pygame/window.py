@@ -11,8 +11,10 @@ from .text import Text
 from .shape import RectangleShape
 from .progress import ProgressBar
 from .list import DrawableList, AbstractDrawableListAligned
+from .grid import Grid, GridCell
 from .joystick import Joystick, JoystickList
 from .keyboard import Keyboard
+from .cursor import Cursor, SystemCursor
 from .clock import Clock
 from .colors import BLACK, WHITE, BLUE, TRANSPARENT
 from .resources import Resources
@@ -32,13 +34,12 @@ class WindowCallback(object):
         self.__wait_time = wait_time
         self.__callback = callback
         self.__clock = Clock()
-
-    def can_call(self) -> bool:
-        return self.__clock.elapsed_time(self.__wait_time, restart=False)
+        self.__clock.restart()
 
     def __call__(self):
-        self.__callback()
-        self.kill()
+        if self.__clock.elapsed_time(self.__wait_time, restart=False):
+            self.__callback()
+            self.kill()
 
     def kill(self) -> None:
         self.__master.remove_window_callback(self)
@@ -49,8 +50,97 @@ class WindowCallbackList(list):
         if not self:
             return
         callback_list = self.copy()
-        for callback in filter(lambda callback: callback.can_call(), callback_list):
+        for callback in callback_list:
             callback()
+
+class WindowDrawableList(DrawableList):
+
+    def __init__(self):
+        super().__init__()
+        self.__index = -1
+
+    def remove(self, *obj_list: Drawable) -> None:
+        super().remove(*obj_list)
+        self.__update_index()
+
+    def remove_from_index(self, index: int) -> None:
+        super().remove_from_index(index)
+        self.__update_index()
+
+    def clear(self) -> None:
+        super().clear()
+        self.__index = -1
+
+    def __update_index(self) -> None:
+        size = len(self.__get_all_focusable())
+        if self.__index >= size:
+            self.__index = size - 1
+
+    def focus_get(self) -> Focusable:
+        if self.__index < 0:
+            return None
+        return self.__get_all_focusable()[self.__index]
+
+    def focus_next(self) -> None:
+        focusable_list = self.__get_all_focusable()
+        if any(obj.take_focus() for obj in focusable_list):
+            size = len(focusable_list)
+            while True:
+                self.__index = (self.__index + 1) % size
+                obj = self.focus_get()
+                if obj.take_focus() and not isinstance(obj, GridCell):
+                    break
+            self.set_focus(obj)
+        else:
+            self.set_focus(None)
+
+    def focus_obj_on_side(self, side: str) -> None:
+        actual_obj = self.focus_get()
+        if actual_obj is None:
+            self.focus_next()
+        else:
+            obj = actual_obj.get_obj_on_side(side)
+            while obj and not obj.take_focus():
+                obj = obj.get_obj_on_side(side)
+            if obj:
+                self.set_focus(obj)
+
+    def set_focus(self, obj: Focusable) -> None:
+        focusable_list = self.__get_all_focusable()
+        if obj is not None and obj not in focusable_list:
+            return
+        for obj_f in focusable_list:
+            obj_f.on_focus_leave()
+        if isinstance(obj, Focusable):
+            self.__index = focusable_list.index(obj)
+            obj.on_focus_set()
+        else:
+            self.__index = -1
+
+    def remove_focus(self, obj: Focusable) -> None:
+        if obj not in self.__get_all_focusable():
+            return
+        if obj.has_focus():
+            self.set_focus(None)
+
+    def focus_mode_update(self) -> None:
+        if Focusable.MODE != Focusable.MODE_MOUSE and self.focus_get() is None:
+            self.focus_next()
+
+    @property
+    def index(self) -> int:
+        return self.__index
+
+    def __get_all_focusable(self) -> Sequence[Focusable]:
+        obj_list = list()
+        for obj in self:
+            if isinstance(obj, Focusable):
+                obj_list.append(obj)
+            if isinstance(obj, (DrawableList, Grid)):
+                if isinstance(obj, Grid):
+                    obj_list.extend(obj.cells)
+                obj_list.extend(obj.find_objects(Focusable))
+        return obj_list
 
 class Window(object):
 
@@ -77,13 +167,15 @@ class Window(object):
     __fps = 60
     __fps_obj = None
     __joystick = JoystickList()
+    __keyboard = Keyboard()
+    __default_cursor = SystemCursor(pygame.SYSTEM_CURSOR_ARROW)
+    __cursor = __default_cursor
     __all_window_event_handler_dict = dict()
     __all_window_key_handler_dict = dict()
     __all_window_key_state_dict = dict()
     __all_window_joystick_handler_dict = dict()
     __all_window_joystick_state_dict = dict()
     __all_window_mouse_handler_list = list()
-    __keyboard = Keyboard()
     __all_window_key_enabled = True
     __server_socket = ServerSocket()
     __client_socket = ClientSocket()
@@ -95,7 +187,7 @@ class Window(object):
         self.__main_clock = pygame.time.Clock()
         self.__loop = False
         self.__show_fps_in_this_window = True
-        self.__objects = DrawableList()
+        self.__objects = WindowDrawableList()
         self.__event_handler_dict = dict()
         self.__key_handler_dict = dict()
         self.__key_state_dict = dict()
@@ -236,6 +328,7 @@ class Window(object):
     def mainloop(self) -> int:
         self.__loop = True
         Window.__all_opened.append(self)
+        Window.__default_cursor.set()
         self.place_objects()
         self.set_grid()
         self.fps_update()
@@ -243,8 +336,10 @@ class Window(object):
         while self.__loop:
             self.__main_clock.tick(Window.__fps)
             self.handle_bg_music()
+            self.handle_cursor()
             self.__callback_after.process()
-            self.objects.focus_mode_update()
+            if Focusable.MODE == Focusable.MODE_KEY and Window.__all_window_key_enabled and self.__key_enabled:
+                self.objects.focus_mode_update()
             self.keyboard.update()
             self.update()
             self.draw_and_refresh()
@@ -256,10 +351,10 @@ class Window(object):
         if not self.__loop:
             return
         self.__loop = False
-        self.on_quit()
-        self.set_focus(None)
         if sound:
             self.play_sound(sound)
+        self.on_quit()
+        self.set_focus(None)
         Window.__all_opened.remove(self)
         if force and not self.main_window and isinstance(Window.__main_window, Window):
             Window.__main_window.stop()
@@ -313,7 +408,7 @@ class Window(object):
         Window.__fps = int(framerate)
 
     @staticmethod
-    def get_framerate() -> int:
+    def get_fps() -> int:
         return Window.__fps
 
     @staticmethod
@@ -364,10 +459,25 @@ class Window(object):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.close()
-                break
+                return
             for event_handler_dict in [Window.__all_window_event_handler_dict, self.__event_handler_dict]:
                 for callback in event_handler_dict.get(event.type, tuple()):
                     callback(event)
+
+    @staticmethod
+    def handle_cursor():
+        Window.__cursor.set()
+        Window.__cursor = Window.__default_cursor
+
+    @staticmethod
+    def set_temporary_window_cursor(cursor: Union[Cursor, SystemCursor]) -> None:
+        if isinstance(cursor, (Cursor, SystemCursor)):
+            Window.__cursor = cursor
+
+    @staticmethod
+    def set_window_cursor(cursor: Union[Cursor, SystemCursor]):
+        if isinstance(cursor, (Cursor, SystemCursor)):
+            Window.__default_cursor = cursor
 
     def __key_handler(self, event: pygame.event.Event) -> None:
         for key_handler_dict in [Window.__all_window_key_handler_dict, self.__key_handler_dict]:
@@ -624,7 +734,6 @@ class Window(object):
         Window.set_music_state(config.getboolean("MUSIC", "enable", fallback=Window.__enable_music))
         Window.set_sound_volume(config.getfloat("SFX", "volume", fallback=Window.__sound_volume) / 100)
         Window.set_sound_state(config.getboolean("SFX", "enable", fallback=Window.__enable_sound))
-        Window.show_fps(config.getboolean("FPS", "show", fallback=Window.__show_fps))
 
     @staticmethod
     def save_config() -> None:
@@ -636,9 +745,6 @@ class Window(object):
             "SFX": {
                 "volume": round(Window.__sound_volume * 100),
                 "enable": Window.get_sound_state()
-            },
-            "FPS": {
-                "show": Window.fps_is_shown()
             }
         }
         config = configparser.ConfigParser()

@@ -57,7 +57,7 @@ class Shape(Drawable, use_parent_theme=False):
 
 class PolygonShape(Shape):
 
-    def __init__(self, color: pygame.Color, outline=0, outline_color=BLACK, points=list(), theme=None):
+    def __init__(self, color: pygame.Color, *, outline=0, outline_color=BLACK, points=list(), theme=None):
         self.__points = list()
         self.__image_points = list()
         self.__image_points_percent = list()
@@ -130,7 +130,7 @@ class PolygonShape(Shape):
 
 class RectangleShape(Shape):
 
-    def __init__(self, width: int, height: int, color: pygame.Color, outline=0, outline_color=BLACK,
+    def __init__(self, width: int, height: int, color: pygame.Color, *, outline=0, outline_color=BLACK,
                  border_radius=0, border_top_left_radius=-1, border_top_right_radius=-1,
                  border_bottom_left_radius=-1, border_bottom_right_radius=-1, theme=None):
         self.__draw_params = {
@@ -195,7 +195,7 @@ class RectangleShape(Shape):
 
 class CircleShape(Shape):
 
-    def __init__(self, radius: int, color: pygame.Color, outline=0, outline_color=BLACK,
+    def __init__(self, radius: int, color: pygame.Color, *, outline=0, outline_color=BLACK,
                  draw_top_left=True, draw_top_right=True,
                  draw_bottom_left=True, draw_bottom_right=True, theme=None):
         self.__radius = 0

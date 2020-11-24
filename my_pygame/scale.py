@@ -8,12 +8,12 @@ from .window import Window
 from .colors import BLUE
 
 class Scale(Clickable, ProgressBar):
-    def __init__(self, master: Window, callback=None, state="normal",
+    def __init__(self, master: Window, callback=None, state="normal", cursor=None, disabled_cursor=None,
                  highlight_color=BLUE, highlight_thickness=2, hover_sound=None, on_click_sound=None, disabled_sound=None, **kwargs):
         ProgressBar.__init__(self, **kwargs)
         Clickable.__init__(
             self, master, self.call_update, state=state, highlight_color=highlight_color, highlight_thickness=highlight_thickness,
-            hover_sound=hover_sound, on_click_sound=on_click_sound, disabled_sound=disabled_sound
+            hover_sound=hover_sound, on_click_sound=on_click_sound, disabled_sound=disabled_sound, cursor=cursor, disabled_cursor=disabled_cursor
         )
         self.__callback = callback
         self.master.bind_joystick(0, "AXIS_LEFT_X", self.axis_event, state=True)

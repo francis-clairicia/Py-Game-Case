@@ -26,22 +26,6 @@ class Focusable:
         self.__highlight_thickness = highlight_thickness
         self.__force_use_highlight_thickness = False
 
-    @property
-    def focus(self) -> bool:
-        return self.__focus
-
-    @focus.setter
-    def focus(self, status: bool) -> None:
-        status = bool(status)
-        focus = self.__focus
-        self.__focus = status
-        if status is True:
-            if not focus:
-                self.on_focus_set()
-        else:
-            if focus:
-                self.on_focus_leave()
-
     def get_obj_on_side(self, side: Optional[str] = None):
         if side is None:
             return self.__side.copy()
@@ -77,7 +61,7 @@ class Focusable:
         self.__force_use_highlight_thickness = bool(status)
 
     def has_focus(self) -> bool:
-        return self.__focus
+        return self.__master.objects.focus_get() is self
 
     def take_focus(self, status=None) -> bool:
         if status is not None:

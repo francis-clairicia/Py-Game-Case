@@ -16,7 +16,7 @@ class Text(Drawable, use_parent_theme=False):
     T_RIGHT = "right"
     T_CENTER = "center"
 
-    def __init__(self, message=str(), font=None, color=BLACK, wrap=0,
+    def __init__(self, message=str(), *, font=None, color=BLACK, wrap=0,
                  justify="left", shadow=False, shadow_x=0, shadow_y=0, shadow_color=BLACK,
                  img=None, compound="left", theme=None):
         Drawable.__init__(self)

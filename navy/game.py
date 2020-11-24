@@ -135,7 +135,6 @@ class Navy(Grid):
 
     def after_drawing(self, surface: pygame.Surface) -> None:
         super().after_drawing(surface)
-        self.move()
         self.ships_list.draw(surface)
         self.box_hit_img.draw(surface)
 

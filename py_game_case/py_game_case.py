@@ -6,11 +6,11 @@ from typing import Callable, Sequence
 import pygame
 from my_pygame import MainWindow, Window, Image, Button, Sprite, RectangleShape, HorizontalGradientShape
 from my_pygame import ButtonListVertical, DrawableListHorizontal
-from my_pygame import Clickable
 from my_pygame import TRANSPARENT, WHITE, BLACK, YELLOW
 from my_pygame import set_color_alpha, change_brightness
 from .constants import RESOURCES, GAMES, SETTINGS
 from .settings import SettingsWindow
+from .version import __version__
 
 class GameProcess(subprocess.Popen):
 
@@ -64,7 +64,7 @@ class PyGameCase(MainWindow):
 
     def __init__(self):
         super().__init__(size=(1280, 720), bg_color=(0, 0, 100), resources=RESOURCES)
-        self.set_title("Py-Game-Case")
+        self.set_title(f"Py-Game-Case - v{__version__}")
         self.set_icon(RESOURCES.IMG["icon"])
 
         TitleButton.set_default_theme("default")
@@ -165,7 +165,7 @@ class PyGameCase(MainWindow):
             if not self.game_launched_processes and not pygame.display.get_active():
                 pass
         if all(not button.has_focus() and not button.hover for button in self.buttons_game_launch) and self.game_id is not None:
-            self.image_game_preview.animate_move(self, speed=75, right=self.left)
+            self.image_game_preview.animate_move_in_background(self, speed=75, right=self.left)
             self.game_id = None
 
     def show_preview(self, game_id: str) -> None:

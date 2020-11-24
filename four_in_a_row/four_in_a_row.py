@@ -81,8 +81,8 @@ class LocalPlayingSection(Section):
         self.button_play.set_obj_on_side(on_top=self.form[-1])
 
     def play(self) -> None:
-        player_1_name = self.form.get_value("P1") or None
-        player_2_name = self.form.get_value("P2") or None
+        player_1_name = self.form.get("P1") or None
+        player_2_name = self.form.get("P2") or None
         self.gameplay.start(LOCAL_PLAYER, player_name=player_1_name, enemy_name=player_2_name)
         self.stop()
 
@@ -107,14 +107,14 @@ class LANPlayingP1(Section):
 
     def update(self) -> None:
         if not self.client_socket.connected():
-            self.button_start_server.state = Button.NORMAL if self.form.get_value("P1") else Button.DISABLED
+            self.button_start_server.state = Button.NORMAL if self.form.get("P1") else Button.DISABLED
             self.form.get_entry("P1").state = Entry.NORMAL
         else:
             self.button_start_server.state = Button.NORMAL
             self.form.get_entry("P1").state = Entry.DISABLED
             if self.get_server_clients_count() == 2:
                 self.set_server_listen(0)
-                self.gameplay.start(LAN_PLAYER, player=1, player_name=self.form.get_value("P1"))
+                self.gameplay.start(LAN_PLAYER, player=1, player_name=self.form.get("P1"))
                 self.stop()
 
     def on_start_loop(self) -> None:
@@ -172,7 +172,7 @@ class LANPlayingP2(Section):
         self.button_connect.move(centerx=self.frame.centerx, bottom=self.frame.bottom - 10)
 
     def update(self) -> None:
-        self.button_connect.state = Button.NORMAL if self.form.get_value("name") else Button.DISABLED
+        self.button_connect.state = Button.NORMAL if self.form.get("name") else Button.DISABLED
 
     def on_start_loop(self) -> None:
         self.form.get_entry("name").focus_set()
@@ -191,10 +191,16 @@ class LANPlayingP2(Section):
         self.text_game_status.show()
         self.text_game_status.message = "Connection..."
         self.draw_and_refresh()
-        if not self.connect_to_server(self.form.get_value("IP"), int(self.form.get_value("port")), 3):
+        try:
+            address = self.form.get("IP")
+            port = int(self.form.get("port"))
+        except ValueError:
+            self.text_game_status.message = "The port of connection must be a number."
+            return
+        if not self.connect_to_server(address, port, 3):
             self.text_game_status.message = "Connection failed. Try again."
         else:
-            self.gameplay.start(LAN_PLAYER, player=2, player_name=self.form.get_value("name"))
+            self.gameplay.start(LAN_PLAYER, player=2, player_name=self.form.get("name"))
             self.stop()
 
 class FourInARowWindow(MainWindow):

@@ -9,7 +9,7 @@ from .text import Text
 
 class Form(Grid):
 
-    def __init__(self, master: Window, bg_color=None, label_justify="right", entry_justify="left"):
+    def __init__(self, master: Window, *, bg_color=None, label_justify="right", entry_justify="left"):
         Grid.__init__(self, master, bg_color)
         self.__entry = dict()
         self.__label_justify = label_justify
@@ -28,7 +28,7 @@ class Form(Grid):
     def get_entry(self, name: str) -> Entry:
         return self.__entry[name]
 
-    def get_value(self, name=None) -> str:
+    def get(self, name=None) -> str:
         if name is None:
             return {name: entry.get() for name, entry in self.__entry.items()}
         return self.get_entry(name).get()

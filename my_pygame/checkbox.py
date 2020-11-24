@@ -9,13 +9,14 @@ from .window import Window
 from .colors import BLUE
 
 class CheckBox(Clickable, RectangleShape, use_parent_theme=False):
-    def __init__(self, master: Window, width: int, height: int, color: pygame.Color, value=None, on_value=True, off_value=False,
+    def __init__(self, master: Window, width: int, height: int, color: pygame.Color, *, value=None, on_value=True, off_value=False,
                  outline=2, img: Optional[Image] = None, callback: Optional[Callable[..., Any]] = None,
-                 highlight_color=BLUE, highlight_thickness=2, state="normal", hover_sound=None, on_click_sound=None, disabled_sound=None, theme=None, **kwargs):
+                 highlight_color=BLUE, highlight_thickness=2, state="normal", cursor=None, disabled_cursor=None,
+                 hover_sound=None, on_click_sound=None, disabled_sound=None, theme=None, **kwargs):
         RectangleShape.__init__(self, width, height, color=color, outline=outline, **kwargs)
         Clickable.__init__(
             self, master, self.change_value, state, highlight_color=highlight_color, highlight_thickness=highlight_thickness,
-            hover_sound=hover_sound, on_click_sound=on_click_sound, disabled_sound=disabled_sound
+            hover_sound=hover_sound, on_click_sound=on_click_sound, disabled_sound=disabled_sound, cursor=cursor, disabled_cursor=disabled_cursor
         )
         self.__on_changed_value = callback
         self.__active_img = img

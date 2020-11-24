@@ -1,10 +1,11 @@
 # -*- coding: Utf-8 -*
 
-from typing import Tuple, Optional, Any, Callable, Dict
+from typing import Tuple, Optional, Union, Any, Callable, Dict
 import pygame
 from pygame.event import Event
 from .focusable import Focusable
 from .window import Window
+from .cursor import Cursor, SystemCursor
 
 class Clickable(Focusable):
 
@@ -12,7 +13,8 @@ class Clickable(Focusable):
     DISABLED = "disabled"
 
     def __init__(self, master: Window, callback: Optional[Callable[..., Any]] = None,
-                 state="normal", hover_sound=None, on_click_sound=None, disabled_sound=None, **kwargs):
+                 state="normal", hover_sound=None, on_click_sound=None, disabled_sound=None,
+                 cursor=None, disabled_cursor=None, **kwargs):
         Focusable.__init__(self, master, **kwargs)
         self.__master = master
         self.__callback = None
@@ -24,11 +26,13 @@ class Clickable(Focusable):
         self.__enable_mouse = True
         self.__enable_key = True
         self.__state = Clickable.NORMAL
+        self.hover_cursor = cursor
+        self.disabled_cursor = disabled_cursor
         self.callback = callback
         self.state = state
         master.bind_multiple_event((pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.JOYBUTTONDOWN), self.event_click_down)
         master.bind_multiple_event((pygame.KEYUP, pygame.MOUSEBUTTONUP, pygame.JOYBUTTONUP), self.event_click_up)
-        master.bind_mouse(self.mouse_motion)
+        master.bind_mouse(self.handle_mouse_position)
 
     @property
     def master(self) -> Window:
@@ -110,6 +114,28 @@ class Clickable(Focusable):
             if hover:
                 self.on_leave()
 
+    @property
+    def hover_cursor(self) -> Union[Cursor, SystemCursor]:
+        return self.__hover_cursor
+
+    @hover_cursor.setter
+    def hover_cursor(self, cursor: Union[Cursor, SystemCursor]):
+        if isinstance(cursor, (Cursor, SystemCursor)):
+            self.__hover_cursor = cursor
+        else:
+            self.__hover_cursor = SystemCursor(pygame.SYSTEM_CURSOR_HAND)
+
+    @property
+    def disabled_cursor(self) -> Union[Cursor, SystemCursor]:
+        return self.__disabled_cursor
+
+    @disabled_cursor.setter
+    def disabled_cursor(self, cursor: Union[Cursor, SystemCursor]):
+        if isinstance(cursor, (Cursor, SystemCursor)):
+            self.__disabled_cursor = cursor
+        else:
+            self.__disabled_cursor = SystemCursor(pygame.SYSTEM_CURSOR_NO)
+
     def play_hover_sound(self) -> None:
         if isinstance(self.hover_sound, pygame.mixer.Sound):
             self.hover_sound.play()
@@ -156,15 +182,17 @@ class Clickable(Focusable):
         elif event.type == pygame.MOUSEBUTTONDOWN:
             self.focus_leave()
 
-    def mouse_motion(self, mouse_pos: Tuple[int, int]) -> None:
-        if hasattr(self, "is_shown") and getattr(self, "is_shown")() is False:
+    def handle_mouse_position(self, mouse_pos: Tuple[int, int]) -> None:
+        if not self.__enable_mouse or (hasattr(self, "is_shown") and getattr(self, "is_shown")() is False):
             return
-        if Focusable.MODE == Focusable.MODE_MOUSE and self.__enable_mouse:
+        if Focusable.MODE == Focusable.MODE_MOUSE:
             if hasattr(self, "rect"):
                 self.hover = getattr(self, "rect").collidepoint(mouse_pos)
                 self.on_mouse_motion(mouse_pos)
             else:
                 self.hover = False
+        if self.hover:
+            self.master.set_temporary_window_cursor(self.hover_cursor if self.state == Clickable.NORMAL else self.disabled_cursor)
 
     def set_enabled_mouse(self, status: bool) -> None:
         self.__enable_mouse = bool(status)

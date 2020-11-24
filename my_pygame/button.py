@@ -11,7 +11,7 @@ from .window import Window
 from .colors import WHITE, GRAY, GRAY_LIGHT, GRAY_DARK, BLACK, BLUE, TRANSPARENT
 
 class Button(Clickable, RectangleShape, use_parent_theme=False):
-    def __init__(self, master: Window, text=str(), font=None, img=None, compound="left",
+    def __init__(self, master: Window, text=str(), *, font=None, img=None, compound="left",
                  shadow=False, shadow_x=0, shadow_y=0, shadow_color=BLACK,
                  callback: Optional[Callable[..., Any]] = None, state="normal",
                  size=None, x_add_size=20, y_add_size=20,
@@ -23,7 +23,7 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
                  disabled_active_bg=None, disabled_active_fg=None,
                  hover_img=None, active_img=None, disabled_img=None,
                  disabled_hover_img=None, disabled_active_img=None,
-                 highlight_color=BLUE, highlight_thickness=2,
+                 highlight_color=BLUE, highlight_thickness=2, cursor=None, disabled_cursor=None,
                  justify=("center", "center"), offset=(0, 0), hover_offset=(0, 0), active_offset=(0, 0),
                  theme=None, **kwargs):
         self.__text = Text(
@@ -82,7 +82,10 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
                 "active": disabled_img if disabled_active_img is None else disabled_active_img
             }
         }
-        Clickable.__init__(self, master, callback, state, hover_sound, on_click_sound, disabled_sound, highlight_color=highlight_color, highlight_thickness=highlight_thickness)
+        Clickable.__init__(
+            self, master, callback, state, hover_sound, on_click_sound, disabled_sound,
+            cursor=cursor, disabled_cursor=disabled_cursor, highlight_color=highlight_color, highlight_thickness=highlight_thickness
+        )
 
     @property
     def text(self) -> str:

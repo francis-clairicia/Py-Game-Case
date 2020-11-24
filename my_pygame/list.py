@@ -12,7 +12,6 @@ class DrawableList:
     def __init__(self, bg_color=None, draw=True):
         self.__bg_color = pygame.Color(bg_color) if bg_color is not None else TRANSPARENT
         self.__list = list()
-        self.__index = -1
         self.__draw = draw
 
     def __len__(self) -> int:
@@ -57,21 +56,16 @@ class DrawableList:
         for obj in obj_list:
             if obj in self.__list:
                 self.__list.remove(obj)
-        self.__update_index()
 
     def remove_from_index(self, index: int) -> None:
         if index in range(len(self.__list)):
             self.__list.pop(index)
-            self.__update_index()
 
     def clear(self) -> None:
         self.__list.clear()
-        self.__index = -1
 
     def empty(self) -> bool:
-        if self.__list:
-            return False
-        return True
+        return bool(self.__list)
 
     def set_priority(self, obj: Drawable, new_pos: int, relative_to=None) -> None:
         former_pos = self.__list.index(obj)
@@ -79,11 +73,6 @@ class DrawableList:
         if relative_to:
             new_pos += self.__list.index(relative_to)
         self.__list.insert(new_pos, obj)
-
-    def __update_index(self) -> None:
-        size = len(self.__get_all_focusable_objects_including_grid_cells())
-        if self.__index >= size:
-            self.__index = size - 1
 
     def draw(self, surface: pygame.Surface) -> None:
         if self.is_shown() and self.__draw:
@@ -113,56 +102,6 @@ class DrawableList:
         for obj in self.__list:
             obj.move_ip(x, y)
 
-    def focus_get(self) -> Focusable:
-        if self.__index < 0:
-            return None
-        return self.__get_all_focusable_objects_including_grid_cells()[self.__index]
-
-    def focus_next(self) -> None:
-        if any(obj.take_focus() for obj in self.__get_all_focusable_objects_including_grid_cells()):
-            size = len(self.__get_all_focusable_objects_including_grid_cells())
-            while True:
-                self.__index = (self.__index + 1) % size
-                obj = self.focus_get()
-                if obj.take_focus():
-                    break
-            self.set_focus(obj)
-        else:
-            self.__index = -1
-
-    def focus_obj_on_side(self, side: str) -> None:
-        actual_obj = self.focus_get()
-        if actual_obj is None:
-            self.focus_next()
-        else:
-            obj = actual_obj.get_obj_on_side(side)
-            while obj and not obj.take_focus():
-                obj = obj.get_obj_on_side(side)
-            if obj:
-                self.set_focus(obj)
-
-    def set_focus(self, obj: Focusable) -> None:
-        if obj is not None and obj not in self.__get_all_focusable_objects_including_grid_cells():
-            return
-        for obj_f in self.__get_all_focusable_objects_including_grid_cells():
-            obj_f.focus = False
-        if isinstance(obj, Focusable):
-            obj.focus = True
-            self.__index = self.__get_all_focusable_objects_including_grid_cells().index(obj)
-        else:
-            self.__index = -1
-
-    def remove_focus(self, obj: Focusable) -> None:
-        if obj not in self.__get_all_focusable_objects_including_grid_cells():
-            return
-        obj.focus = False
-        if self.focus_get() == obj:
-            self.set_focus(None)
-
-    def focus_mode_update(self) -> None:
-        if Focusable.MODE != Focusable.MODE_MOUSE and self.focus_get() is None:
-            self.focus_next()
-
     def show(self) -> None:
         for obj in self.__list:
             obj.show()
@@ -183,10 +122,6 @@ class DrawableList:
         return tuple(self.__list)
 
     @property
-    def index(self) -> int:
-        return self.__index
-
-    @property
     def focusable(self) -> Sequence[Focusable]:
         return self.find_objects(Focusable)
 
@@ -201,17 +136,6 @@ class DrawableList:
                 obj_list.append(obj)
             if isinstance(obj, (DrawableList, Grid)):
                 obj_list.extend(obj.find_objects(obj_type))
-        return obj_list
-
-    def __get_all_focusable_objects_including_grid_cells(self) -> Sequence[Focusable]:
-        obj_list = list()
-        for obj in self.__list:
-            if isinstance(obj, Focusable):
-                obj_list.append(obj)
-            if isinstance(obj, (DrawableList, Grid)):
-                if isinstance(obj, Grid):
-                    obj_list.extend(obj.cells)
-                obj_list.extend(obj.find_objects(Focusable))
         return obj_list
 
     left = property(lambda self: self.rect.left, lambda self, value: self.move(left=value))

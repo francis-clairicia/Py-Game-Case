@@ -6,10 +6,11 @@ from .shape import RectangleShape, PolygonShape
 from .clickable import Clickable
 from .window import Window
 from .clock import Clock
+from .cursor import SystemCursor
 from .colors import WHITE, BLACK, GRAY
 
 class Entry(Clickable, RectangleShape):
-    def __init__(self, master: Window, width=10, font=None,
+    def __init__(self, master: Window, *, width=10, font=None,
                  shadow=False, shadow_x=0, shadow_y=0, shadow_color=BLACK,
                  bg=WHITE, fg=BLACK, interval=500,
                  state="normal", highlight_color=GRAY, highlight_thickness=2,
@@ -26,7 +27,7 @@ class Entry(Clickable, RectangleShape):
         RectangleShape.__init__(self, width + 15, height + 10, bg, **kwargs)
         Clickable.__init__(
             self, master, callback=self.start_edit, state=state, highlight_color=highlight_color, highlight_thickness=highlight_thickness,
-            hover_sound=hover_sound, on_click_sound=on_click_sound, disabled_sound=disabled_sound
+            hover_sound=hover_sound, on_click_sound=on_click_sound, disabled_sound=disabled_sound, cursor=SystemCursor(pygame.SYSTEM_CURSOR_IBEAM)
         )
         self.__cursor_line = PolygonShape(fg, outline=2, points=[(0, 0), (0, height)])
         self.__cursor = 0

@@ -30,6 +30,18 @@ class GridCell(Focusable, Drawable):
 
     def after_drawing(self, surface: pygame.Surface) -> None:
         if isinstance(self.__drawable, Drawable):
+            self.__drawable.draw(surface)
+
+    def move(self, **kwargs) -> None:
+        super().move(**kwargs)
+        self.__update_drawable_position()
+
+    def move_ip(self, x: float, y: float) -> None:
+        super().move_ip(x, y)
+        self.__update_drawable_position()
+
+    def __update_drawable_position(self) -> None:
+        if isinstance(self.__drawable, Drawable):
             move = {
                 "left":   {"left":   self.left + self.__padx,   "centery": self.centery},
                 "right":  {"right":  self.right - self.__padx,  "centery": self.centery},
@@ -38,7 +50,6 @@ class GridCell(Focusable, Drawable):
                 "center": {"center": self.center},
             }
             self.__drawable.move(**move[self.__justify])
-            self.__drawable.draw(surface)
 
     def set_object(self, drawable: Union[Drawable, Focusable, None], padx: int, pady: int, justify: str) -> None:
         self.__drawable = drawable
@@ -47,6 +58,7 @@ class GridCell(Focusable, Drawable):
         self.__pady = max(int(pady), 0)
         self.reset()
         self.take_focus(isinstance(drawable, Focusable))
+        self.__update_drawable_position()
 
     def reset(self) -> None:
         if not isinstance(self.__drawable, Drawable):
@@ -189,7 +201,7 @@ class Grid(Drawable, use_parent_theme=False):
     def __setitem__(self, cell: Tuple[int, int], infos: Dict[str, Union[int, Drawable, Focusable]]) -> None:
         self.place(row=cell[0], column=cell[1], **infos)
 
-    def get(self, row: int, column: int) -> Union[Drawable, Focusable]:
+    def get_obj_in_cell(self, row: int, column: int) -> Union[Drawable, Focusable]:
         if row not in self.rows or column not in self.rows[row].cells:
             return None
         return self.rows[row].cells[column].get()
