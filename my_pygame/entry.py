@@ -20,7 +20,7 @@ class Entry(Clickable, RectangleShape):
             img=None, compound="left", wrap=0, justify="left"
         )
         self.__nb_chars = max(int(width), 1)
-        width, height = self.__text.font.size("M" * self.__nb_chars)
+        width, height = self.__text.font.size("W" * self.__nb_chars)
         RectangleShape.__init__(self, width + 15, height + 10, bg, **kwargs)
         Clickable.__init__(
             self, master, callback=self.start_edit, state=state, highlight_color=highlight_color, highlight_thickness=highlight_thickness,

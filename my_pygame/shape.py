@@ -78,18 +78,18 @@ class PolygonShape(Shape):
         right = max((point.x for point in points), default=0)
         top = min((point.y for point in points), default=0)
         bottom = max((point.y for point in points), default=0)
-        self.__image_points = [Vector2(point.x - left, point.y - top) for point in points]
-        Shape.set_size(self, right - left, bottom - top)
-        Shape.move(self, left=left, top=top)
+        width = right - left
+        height = bottom - top
+        image_points = [Vector2(point.x - left, point.y - top) for point in points]
         self.__image_points_percent = [
-            ((point.x / self.width if self.width != 0 else 0), (point.y / self.height if self.height != 0 else 0))
-            for point in self.__image_points
+            ((point.x / width if width != 0 else 0), (point.y / height if height != 0 else 0))
+            for point in image_points
         ]
-        self.shape_update()
+        Shape.set_size(self, width, height)
+        Shape.move(self, left=left, top=top)
 
     def shape_update(self) -> None:
         self.__image_points = [Vector2(self.width * x, self.height * y) for x, y in self.__image_points_percent]
-        self.move()
         if len(self.points) > 2:
             pygame.draw.polygon(self.image, self.color, self.__image_points)
         self.mask_update()

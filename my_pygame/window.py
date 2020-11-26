@@ -74,9 +74,7 @@ class WindowDrawableList(DrawableList):
         self.__index = -1
 
     def __update_index(self) -> None:
-        size = len(self.__get_all_focusable())
-        if self.__index >= size:
-            self.__index = size - 1
+        self.__index = min(self.__index, len(self.__get_all_focusable()) - 1)
 
     def focus_get(self) -> Focusable:
         if self.__index < 0:

@@ -11,28 +11,19 @@ from .clock import Clock
 
 class Drawable(Sprite, ThemedObject):
 
-    __default_scale = (1, 1)
-    __trace = list()
-
     def __init__(self, surface: Optional[pygame.Surface] = None, rotate=0, **kwargs):
         Sprite.__init__(self)
         ThemedObject.__init__(self)
-        Drawable.__trace.append(self)
         self.__surface = self.__mask = None
         self.__surface_without_scale = None
         self.__rect = pygame.Rect(0, 0, 0, 0)
         self.__x = self.__y = 0
-        self.__scale = self.__default_scale
         self.__former_moves = dict()
         self.__draw_sprite = True
         self.__valid_size = True
         self.image = self.surface_resize(surface, **kwargs)
         self.rotate(rotate)
         self.__animation = Animation(self)
-
-    def __del__(self) -> None:
-        if self in Drawable.__trace:
-            Drawable.__trace.remove(self)
 
     def __getitem__(self, name: str) -> Union[int, tuple[int, int]]:
         return getattr(self.rect, name)
@@ -72,19 +63,7 @@ class Drawable(Sprite, ThemedObject):
             surface = surface.image
         elif not isinstance(surface, pygame.Surface):
             surface = create_surface((0, 0))
-        self.__surface_without_scale = surface
-        if self.__scale != (1, 1):
-            try:
-                scale_w, scale_h = self.__scale
-                width, height = surface.get_size()
-                self.__surface = pygame.transform.smoothscale(surface, (round(width * scale_w), round(height * scale_h)))
-            except pygame.error:
-                self.__valid_size = False
-                self.__surface = surface
-            else:
-                self.__valid_size = True
-        else:
-            self.__surface = surface
+        self.__surface = surface
         self.__rect = self.__surface.get_rect(**self.__former_moves)
         self.mask_update()
 
@@ -98,16 +77,6 @@ class Drawable(Sprite, ThemedObject):
 
     def mask_update(self) -> None:
         self.__mask = pygame.mask.from_surface(self.__surface)
-
-    @property
-    def scale(self) -> tuple[float, float]:
-        return self.__scale
-
-    @scale.setter
-    def scale(self, scale: tuple[float, float]) -> None:
-        scale_w, scale_h = scale
-        self.__scale = max(scale_w, 0), max(scale_h, 0)
-        self.image = self.__surface_without_scale
 
     @staticmethod
     def set_default_scale(scale_w: float, scale_h: float) -> None:
@@ -167,13 +136,13 @@ class Drawable(Sprite, ThemedObject):
         angle %= 360
         if angle == 0:
             return
-        self.image = pygame.transform.rotate(self.__surface_without_scale, angle)
+        self.image = pygame.transform.rotate(self.image, angle)
 
     def rotate_through_point(self, angle: float, point: Union[tuple[int, int], Vector2]) -> None:
         angle %= 360
         if angle == 0:
             return
-        image, rect = self.surface_rotate(self.__surface_without_scale, self.rect, angle, point)
+        image, rect = self.surface_rotate(self.image, self.rect, angle, point)
         self.image = image
         self.center = rect.center
 
@@ -242,7 +211,7 @@ class Drawable(Sprite, ThemedObject):
     def set_size(self, *size: Union[int, tuple[int, int]], smooth=True) -> None:
         size = size if len(size) == 2 else size[0]
         try:
-            self.image = self.surface_resize(self.__surface_without_scale, size=size, smooth=smooth)
+            self.image = self.surface_resize(self.image, size=size, smooth=smooth)
         except pygame.error:
             self.__valid_size = False
         else:
@@ -250,7 +219,7 @@ class Drawable(Sprite, ThemedObject):
 
     def set_width(self, width: float, smooth=True)-> None:
         try:
-            self.image = self.surface_resize(self.__surface_without_scale, width=width, smooth=smooth)
+            self.image = self.surface_resize(self.image, width=width, smooth=smooth)
         except pygame.error:
             self.__valid_size = False
         else:
@@ -258,7 +227,7 @@ class Drawable(Sprite, ThemedObject):
 
     def set_height(self, height: float, smooth=True) -> None:
         try:
-            self.image = self.surface_resize(self.__surface_without_scale, height=height, smooth=smooth)
+            self.image = self.surface_resize(self.image, height=height, smooth=smooth)
         except pygame.error:
             self.__valid_size = False
         else:

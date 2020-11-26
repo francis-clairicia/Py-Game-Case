@@ -165,15 +165,9 @@ class AbstractDrawableListAligned(DrawableList):
 
     HORIZONTAL = "horizontal"
     VERTICAL = "vertical"
-    __trace = list()
-    __default_scale = {
-        HORIZONTAL: 1,
-        VERTICAL: 1
-    }
 
     def __init__(self, offset: int, orient: str, bg_color=None, draw=True, justify="center"):
         DrawableList.__init__(self, bg_color=bg_color, draw=draw)
-        AbstractDrawableListAligned.__trace.append(self)
         self.__background = Drawable()
         self.__offset = offset
         self.__orient = orient
@@ -196,10 +190,6 @@ class AbstractDrawableListAligned(DrawableList):
         }
         self.__justify = justify_dict[orient][justify]
 
-    def __del__(self) -> None:
-        if self in AbstractDrawableListAligned.__trace:
-            AbstractDrawableListAligned.__trace.remove(self)
-
     @property
     def offset(self) -> int:
         return self.__offset
@@ -208,13 +198,6 @@ class AbstractDrawableListAligned(DrawableList):
     def offset(self, value: int) -> None:
         self.__offset = int(value)
         self.__align_all_objects()
-
-    @staticmethod
-    def offset_scale(scale_w: float, scale_h: float) -> None:
-        AbstractDrawableListAligned.__default_scale[AbstractDrawableListAligned.HORIZONTAL] = max(scale_w, 0)
-        AbstractDrawableListAligned.__default_scale[AbstractDrawableListAligned.VERTICAL] = max(scale_h, 0)
-        for obj_list in AbstractDrawableListAligned.__trace:
-            AbstractDrawableListAligned.__align_all_objects(obj_list)
 
     def add_multiple(self, iterable_of_objects: Iterable[Drawable]) -> None:
         DrawableList.add_multiple(self, iterable_of_objects)
@@ -239,7 +222,7 @@ class AbstractDrawableListAligned(DrawableList):
 
     def __align_all_objects(self) -> None:
         for obj_1, obj_2 in zip(self.list[:-1], self.list[1:]):
-            obj_2.move(**{self.__start: getattr(obj_1.rect, self.__end, 0) + (self.offset  * self.__default_scale[self.__orient])})
+            obj_2.move(**{self.__start: getattr(obj_1.rect, self.__end, 0) + self.offset})
         for obj in self.list:
             obj.move(**{self.__justify: getattr(self.list[0].rect, self.__justify, 0)})
 
