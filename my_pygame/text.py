@@ -2,7 +2,6 @@
 
 import os.path
 import textwrap
-from typing import Tuple
 import pygame
 from pygame.font import Font, SysFont
 from .surface import create_surface
@@ -91,11 +90,11 @@ class Text(Drawable, use_parent_theme=False):
         self.config(color=color)
 
     @property
-    def shadow(self) -> Tuple[int, int]:
+    def shadow(self) -> tuple[int, int]:
         return self.__shadow
 
     @shadow.setter
-    def shadow(self, pos: Tuple[int, int]) -> None:
+    def shadow(self, pos: tuple[int, int]) -> None:
         self.config(shadow=pos)
 
     @property

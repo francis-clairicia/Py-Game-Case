@@ -1,6 +1,6 @@
 # -*- coding: Utf-8 -*
 
-from typing import Union, Dict
+from typing import Union
 import pygame
 
 class Keyboard(object):
@@ -71,11 +71,11 @@ class Keyboard(object):
         self.__states = pygame.key.get_pressed()
 
     @property
-    def key_dict(self) -> Dict[int, str]:
+    def key_dict(self) -> dict[int, str]:
         return self.__key_dict
 
     @property
-    def key_values(self) -> Dict[str, int]:
+    def key_values(self) -> dict[str, int]:
         return self.__key_values
 
     def __contains__(self, key: int) -> bool:

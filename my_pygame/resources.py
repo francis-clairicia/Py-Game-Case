@@ -2,10 +2,10 @@
 
 import os
 import pygame
-from typing import Tuple, Union, Dict, List, Any, Iterator, Callable
+from typing import Union, Any, Iterator, Callable
 from .thread import threaded_function
 
-def find_in_iterable(iterable, valid_callback=None) -> Iterator[Tuple[Union[int, str], ...]]:
+def find_in_iterable(iterable, valid_callback=None) -> Iterator[tuple[Union[int, str], ...]]:
 
     def intern_find(iterable, *key_before, valid_callback=None):
         if isinstance(iterable, dict):
@@ -21,12 +21,12 @@ def find_in_iterable(iterable, valid_callback=None) -> Iterator[Tuple[Union[int,
 
     return intern_find(iterable, valid_callback=valid_callback)
 
-def travel_container(key_path: Tuple[Union[int, str], ...], container: Dict[str, Any]) -> Tuple[Union[int, str], Union[List[str], Dict[Any, str]]]:
+def travel_container(key_path: tuple[Union[int, str], ...], container: dict[str, Any]) -> tuple[Union[int, str], Union[list[str], dict[Any, str]]]:
     for i in range(len(key_path) - 1):
         container = container[key_path[i]]
     return key_path[-1], container
 
-def get_value_in_container(key_path: Tuple[Union[int, str], ...], container: Dict[str, Any]) -> Any:
+def get_value_in_container(key_path: tuple[Union[int, str], ...], container: dict[str, Any]) -> Any:
     try:
         key, container = travel_container(key_path, container)
         value = container[key]
@@ -34,7 +34,7 @@ def get_value_in_container(key_path: Tuple[Union[int, str], ...], container: Dic
         return None
     return value
 
-def find_key_in_container(key: str, container: Dict[str, Any]) -> Tuple[Union[int, str], ...]:
+def find_key_in_container(key: str, container: dict[str, Any]) -> tuple[Union[int, str], ...]:
     for key_path in find_in_iterable(container):
         if key in key_path:
             return key_path[:key_path.index(key) + 1]
@@ -50,20 +50,20 @@ class ResourcesLoader:
 
     def load(self) -> None:
         if not self.__loaded:
-            self.__not_loaded.update(self.__files.copy())
+            self.__not_loaded |= self.__files.copy()
         for key_path in find_in_iterable(self.__not_loaded, valid_callback=os.path.isfile):
             key, container = travel_container(key_path, self.__not_loaded)
             if callable(self.__resources_loader):
                 container[key] = self.__resources_loader(container[key])
-        self.__loaded.update(self.__not_loaded)
+        self.__loaded |= self.__not_loaded
         self.__not_loaded.clear()
 
-    def update(self, resource_dict: Dict[str, Any]) -> None:
-        self.__files.update(resource_dict)
+    def update(self, resource_dict: dict[str, Any]) -> None:
+        self.__files |= resource_dict
         if callable(self.__resources_loader):
-            self.__not_loaded.update(resource_dict.copy())
+            self.__not_loaded |= resource_dict.copy()
         else:
-            self.__loaded.update(resource_dict.copy())
+            self.__loaded |= resource_dict.copy()
 
     def __contains__(self, key: Any) -> bool:
         return key in self.__loaded
@@ -122,7 +122,7 @@ class Resources:
             return None
         return sound.play()
 
-    def font(self, key: str, *params) -> Tuple[str, ...]:
+    def font(self, key: str, *params) -> tuple[str, ...]:
         key_path = find_key_in_container(key, self.__font.loaded)
         if key_path is None:
             font = None

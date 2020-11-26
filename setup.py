@@ -40,7 +40,6 @@ def get_application_version(app: str) -> str:
 
 parser = argparse.ArgumentParser(prog="setup.py", description="Setup for executable freezing")
 parser.add_argument("--zip", help="Create a zip file when it's finished", action="store_true")
-parser.add_argument("--zip-no-build", help="Create a zip file without build", action="store_true")
 args = parser.parse_args()
 
 #############################################################################
@@ -48,7 +47,7 @@ args = parser.parse_args()
 
 application = "py_game_case"
 
-dependencies = ["pygame", "my_pygame", "tkinter", "updater", "navy", "four_in_a_row"]
+dependencies = ["pygame", "my_pygame", "tkinter", "psutil", "updater", "navy", "four_in_a_row"]
 
 additional_files = ["resources"]
 
@@ -77,12 +76,6 @@ options = {
     "optimize": 0,
     "silent": True
 }
-
-if args.zip_no_build:
-    zip_compress()
-    if sys.platform == "win32":
-        os.system("pause")
-    sys.exit(0)
 
 print("-----------------------------------{ cx_Freeze }-----------------------------------")
 print("Project Name: {project_name}".format(**executable_infos))

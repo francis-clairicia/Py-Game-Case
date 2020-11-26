@@ -2,7 +2,7 @@
 
 import os
 import sys
-from typing import List, Tuple, Union, Optional, Iterator
+from typing import Union, Optional, Iterator
 import pickle
 import pygame
 
@@ -86,20 +86,20 @@ class Joystick(object):
     """------------------------------------------------------------------"""
 
     @property
-    def button_list(self) -> List[str]:
+    def button_list(self) -> list[str]:
         return self.__button_list
 
     @property
-    def axis_list(self) -> List[str]:
+    def axis_list(self) -> list[str]:
         return self.__axis_list
 
     @property
-    def dpad_list(self) -> List[str]:
+    def dpad_list(self) -> list[str]:
         return self.__dpad_list
 
     """------------------------------------------------------------------"""
 
-    def __test(self, key: str) -> Tuple[str, str]:
+    def __test(self, key: str) -> tuple[str, str]:
         key = key.upper()
         if key.endswith(("-", "+")):
             key, suffix = key[:-1], key[-1]
@@ -141,7 +141,7 @@ class Joystick(object):
             return abs(state)
         return state
 
-    def search_key(self, event_type: str, index: int, hat_value: Optional[Tuple[int, int]] = None, axis: Optional[int] = None) -> Union[str, None]:
+    def search_key(self, event_type: str, index: int, hat_value: Optional[tuple[int, int]] = None, axis: Optional[int] = None) -> Union[str, None]:
         for key, (event, idx, value) in self.__event_type.items():
             if event == event_type and idx == index and (event != "hat" or value == hat_value) and (event != "axis" or axis is None or value == axis):
                 return key
@@ -152,10 +152,10 @@ class Joystick(object):
         infos = self.__event_type[key]
         return infos[1]
 
-    def __setitem__(self, key: str, value: Tuple[int, int, Tuple[int, int]]) -> None:
+    def __setitem__(self, key: str, value: tuple[int, int, tuple[int, int]]) -> None:
         self.set_event(key, *value)
 
-    def set_event(self, key: str, event: int, index: int, hat_value: Optional[Tuple[int, int]] = (0, 0)) -> None:
+    def set_event(self, key: str, event: int, index: int, hat_value: Optional[tuple[int, int]] = (0, 0)) -> None:
         key = self.__test(key)[0]
         event_map = {
             pygame.JOYBUTTONDOWN: ("button", index, 1),
@@ -201,7 +201,7 @@ class Joystick(object):
         return pygame.joystick.get_count()
 
     @staticmethod
-    def list() -> Tuple[str, ...]:
+    def list() -> tuple[str, ...]:
         try:
             joystick = tuple(pygame.joystick.Joystick(i).get_name() for i in range(Joystick.count()))
         except pygame.error:

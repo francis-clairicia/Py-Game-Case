@@ -33,7 +33,7 @@ class Entry(Clickable, RectangleShape):
         self.__cursor_animation_clock = Clock()
         self.__cursor_animation_interval = 0
         self.interval = interval
-        self.master.bind_multiple_event([pygame.KEYDOWN, pygame.TEXTINPUT, pygame.TEXTEDITING], self.key_press)
+        self.master.bind_multiple_event([pygame.KEYDOWN, pygame.TEXTINPUT], self.key_press)
         self.master.bind_key(pygame.K_ESCAPE, lambda event: self.__escape_key_handler())
         if self.__edit():
             self.start_edit()

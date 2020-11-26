@@ -1,8 +1,8 @@
 # -*- coding: Utf-8 -*
 
-from typing import Dict, Any, Type, Iterator, Union, Sequence, Optional
+from typing import Any, Iterator, Union, Sequence, Optional
 
-def get_all_parent_class(cls: Type[object], do_not_search_for: Optional[Sequence[Type[object]]] = list()) -> Iterator[Type[object]]:
+def get_all_parent_class(cls: type[object], do_not_search_for: Optional[Sequence[type[object]]] = list()) -> Iterator[type[object]]:
     for base in cls.__bases__:
         yield base
         if base not in do_not_search_for:
@@ -27,8 +27,7 @@ class MetaThemedObject(type):
         elif isinstance(theme, str):
             theme = [theme]
         theme_kwargs = cls.get_theme_options(*default_theme, *theme)
-        theme_kwargs.update(kwargs)
-        return type.__call__(cls, *args, **theme_kwargs)
+        return type.__call__(cls, *args, **(theme_kwargs | kwargs))
 
 class ThemedObject(object, metaclass=MetaThemedObject):
 
@@ -41,7 +40,7 @@ class ThemedObject(object, metaclass=MetaThemedObject):
             _CLASSES_NOT_USING_PARENT_DEFAULT_THEMES.append(cls)
 
     @classmethod
-    def set_theme(cls, name: str, options: Dict[str, Any]) -> None:
+    def set_theme(cls, name: str, options: dict[str, Any]) -> None:
         theme_dict = _THEMES.get(cls)
         if theme_dict is None:
             theme_dict = _THEMES[cls] = dict()
@@ -49,7 +48,7 @@ class ThemedObject(object, metaclass=MetaThemedObject):
         if name not in theme_dict:
             theme_dict[name] = options
         else:
-            theme_dict[name].update(options)
+            theme_dict[name] |= options
 
     @classmethod
     def set_default_theme(cls, name: Union[str, Sequence[str], None]) -> None:
@@ -66,11 +65,11 @@ class ThemedObject(object, metaclass=MetaThemedObject):
                 _DEFAULT_THEME[cls] = list(filter(lambda theme: theme.startswith("__"), _DEFAULT_THEME[cls])) + name
 
     @classmethod
-    def get_theme_options(cls, *themes: str) -> Dict[str, Any]:
+    def get_theme_options(cls, *themes: str) -> dict[str, Any]:
         theme_kwargs = dict()
         for t in themes:
             if cls not in _CLASSES_NOT_USING_PARENT_THEMES:
                 for parent in reversed(list(get_all_parent_class(cls, do_not_search_for=_CLASSES_NOT_USING_PARENT_THEMES))):
-                    theme_kwargs.update(_THEMES.get(parent, dict()).get(t, dict()))
-            theme_kwargs.update(_THEMES.get(cls, dict()).get(t, dict()))
+                    theme_kwargs |= _THEMES.get(parent, dict()).get(t, dict())
+            theme_kwargs |= _THEMES.get(cls, dict()).get(t, dict())
         return theme_kwargs

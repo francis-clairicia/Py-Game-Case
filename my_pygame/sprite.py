@@ -1,7 +1,7 @@
 # -*- coding: Utf-8 -*
 
 import itertools
-from typing import List, Union, Dict
+from typing import Union
 import pygame
 from .surface import create_surface
 from .drawable import Drawable
@@ -22,25 +22,25 @@ class Sprite(Drawable, use_parent_theme=False):
         self.__animation = False
         self.__loop = False
 
-    def get_sprite_dict(self) -> Dict[str, List[Image]]:
+    def get_sprite_dict(self) -> dict[str, list[Image]]:
         return self.__sprites
 
-    def get_actual_sprite_list(self) -> List[Image]:
+    def get_actual_sprite_list(self) -> list[Image]:
         return self.__sprite_list
 
     def get_actual_sprite_list_name(self) -> str:
         return self.__sprite_list_name
 
-    def get_sprite_list(self, name: str) -> List[Image]:
+    def get_sprite_list(self, name: str) -> list[Image]:
         return self.__sprites.get(str(name), list())
 
-    def get_all_sprites(self) -> List[Image]:
+    def get_all_sprites(self) -> list[Image]:
         return list(itertools.chain.from_iterable(self.__sprites.values()))
 
     def add_sprite(self, name: str, img: pygame.Surface, set_sprite=False, **kwargs) -> None:
         self.add_sprite_list(name, [img], set_sprite_list=set_sprite, **kwargs)
 
-    def add_sprite_list(self, name: str, img_list: List[pygame.Surface], set_sprite_list=False, **kwargs) -> None:
+    def add_sprite_list(self, name: str, img_list: list[pygame.Surface], set_sprite_list=False, **kwargs) -> None:
         if not img_list or any(not isinstance(obj, pygame.Surface) for obj in img_list):
             return
         name = str(name)
@@ -50,7 +50,7 @@ class Sprite(Drawable, use_parent_theme=False):
         if set_sprite_list or self.__nb_sprites == 0:
             self.set_sprite_list(name)
 
-    def add_spritesheet(self, name: str, img: pygame.Surface, rect_list: List[pygame.Rect], set_sprite_list=False, **kwargs) -> None:
+    def add_spritesheet(self, name: str, img: pygame.Surface, rect_list: list[pygame.Rect], set_sprite_list=False, **kwargs) -> None:
         if not isinstance(img, pygame.Surface) or not rect_list:
             return
         self.add_sprite_list(name, [img.subsurface(rect) for rect in rect_list], set_sprite_list=set_sprite_list, **kwargs)

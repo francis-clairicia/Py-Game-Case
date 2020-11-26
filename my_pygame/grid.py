@@ -1,6 +1,6 @@
 # -*- coding: Utf-8 -*
 
-from typing import Tuple, Dict, Union, List, Type
+from typing import Union
 import pygame
 from .drawable import Drawable
 from .focusable import Focusable
@@ -94,10 +94,10 @@ class GridRow:
         return repr(self)
 
     @property
-    def cells(self) -> Dict[int, GridCell]:
+    def cells(self) -> dict[int, GridCell]:
         return self.__cells
 
-    def sorted_cells(self) -> List[GridCell]:
+    def sorted_cells(self) -> list[GridCell]:
         return [cell for index, cell in sorted(self.cells.items(), key=lambda item: item[0])]
 
     @property
@@ -111,7 +111,7 @@ class GridRow:
             cell = self.cells[column] = GridCell(self.__master, self.__row, column)
         cell.set_object(obj, padx, pady, justify)
 
-    def move(self, left: int, top: int, width_dict: Dict[int, int]) -> None:
+    def move(self, left: int, top: int, width_dict: dict[int, int]) -> None:
         for i in range(self.nb_columns + 1):
             if i in self.cells:
                 cell = self.cells[i]
@@ -137,7 +137,7 @@ class GridRow:
         for cell in self.cells.values():
             cell.reset()
 
-    def set_cell_size(self, width_dict: Dict[int, int], height_dict: Dict[int, int]) -> None:
+    def set_cell_size(self, width_dict: dict[int, int], height_dict: dict[int, int]) -> None:
         for cell in self.cells.values():
             cell.image = create_surface((width_dict[cell.column], height_dict[self.__row]))
 
@@ -156,10 +156,10 @@ class Grid(Drawable, use_parent_theme=False):
         self.__max_height_rows = dict()
 
     @property
-    def rows(self) -> Dict[int, GridRow]:
+    def rows(self) -> dict[int, GridRow]:
         return self.__rows_dict
 
-    def sorted_rows(self) -> List[GridRow]:
+    def sorted_rows(self) -> list[GridRow]:
         return sorted(self.rows.values(), key=lambda row: row.index())
 
     @property
@@ -191,14 +191,14 @@ class Grid(Drawable, use_parent_theme=False):
         self.__bg_color = TRANSPARENT if color is None else pygame.Color(color)
         self.__update_background(self.size)
 
-    def __update_background(self, size: Tuple[int, int]) -> None:
+    def __update_background(self, size: tuple[int, int]) -> None:
         self.image = create_surface(size)
         self.fill(self.__bg_color)
 
-    def __getitem__(self, cell: Tuple[int, int]) -> Union[Drawable, Focusable]:
+    def __getitem__(self, cell: tuple[int, int]) -> Union[Drawable, Focusable]:
         return self.get(*cell)
 
-    def __setitem__(self, cell: Tuple[int, int], infos: Dict[str, Union[int, Drawable, Focusable]]) -> None:
+    def __setitem__(self, cell: tuple[int, int], infos: dict[str, Union[int, Drawable, Focusable]]) -> None:
         self.place(row=cell[0], column=cell[1], **infos)
 
     def get_obj_in_cell(self, row: int, column: int) -> Union[Drawable, Focusable]:
@@ -210,7 +210,7 @@ class Grid(Drawable, use_parent_theme=False):
         self.__add_object(obj, row, column, padx, pady, justify)
         self.__update_grid()
 
-    def place_multiple(self, obj_dict: Dict[Tuple[int, int], Union[Drawable, Focusable, Dict[str, Union[int, Drawable, Focusable]]]]) -> None:
+    def place_multiple(self, obj_dict: dict[tuple[int, int], Union[Drawable, Focusable, dict[str, Union[int, Drawable, Focusable]]]]) -> None:
         for (row, col), item in obj_dict.items():
             if isinstance(item, dict):
                 self.__add_object(row=row, column=col, **item)
@@ -269,7 +269,7 @@ class Grid(Drawable, use_parent_theme=False):
                 row.move(self.left, top, self.__max_width_columns)
             top += self.__max_height_rows[i]
 
-    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
+    def set_size(self, *size: Union[int, tuple[int, int]], smooth=True) -> None:
         return
 
     def set_width(self, width: float, smooth=True)-> None:
@@ -325,18 +325,18 @@ class Grid(Drawable, use_parent_theme=False):
                     cells[-1].remove_obj_on_side(Focusable.ON_RIGHT)
 
     @property
-    def focusable(self) -> List[Focusable]:
+    def focusable(self) -> list[Focusable]:
         return self.find_objects(Focusable)
 
     @property
-    def drawable(self) -> List[Drawable]:
+    def drawable(self) -> list[Drawable]:
         return self.find_objects(Drawable)
 
     @property
-    def cells(self) -> List[GridCell]:
+    def cells(self) -> list[GridCell]:
         return [cell for row in self.rows.values() for cell in row.cells.values()]
 
-    def find_objects(self, obj_type: Type[object]) -> List[object]:
+    def find_objects(self, obj_type: type[object]) -> list[object]:
         obj_list = list()
         for row in self.rows.values():
             for cell in row.cells.values():

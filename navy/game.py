@@ -6,14 +6,14 @@ import pickle
 import random
 import json
 import pygame
-from typing import Sequence, Dict, Any, Tuple, Union
+from typing import Sequence, Any, Union
 from my_pygame import Window, DrawableList, Grid
 from my_pygame import Image, ImageButton, Text, RectangleShape, Button, Sprite
 from my_pygame import GREEN, GREEN_DARK, GREEN_LIGHT, BLACK, WHITE, YELLOW, TRANSPARENT, RED, RED_DARK
 from my_pygame import ClientSocket
 from .constants import RESOURCES, NB_LINES_BOXES, NB_COLUMNS_BOXES, BOX_SIZE, NB_SHIPS
 
-def print_navy_map(navy_map: Dict[Tuple[int, int], int], higlight_box=None) -> None:
+def print_navy_map(navy_map: dict[tuple[int, int], int], higlight_box=None) -> None:
     navy_list = [[0 for _ in range(NB_COLUMNS_BOXES)] for _ in range(NB_LINES_BOXES)]
     for (l, c), value in navy_map.items():
         navy_list[l][c] = value if higlight_box is None or (l, c) != tuple(higlight_box) else f"({value})"
@@ -22,7 +22,7 @@ def print_navy_map(navy_map: Dict[Tuple[int, int], int], higlight_box=None) -> N
     print("-" * NB_COLUMNS_BOXES)
 
 class Box(Button, use_parent_theme=False):
-    def __init__(self, master, navy, size: Tuple[int, int], pos: Tuple[int, int]):
+    def __init__(self, master, navy, size: tuple[int, int], pos: tuple[int, int]):
         params = {
             "size": size,
             "bg": TRANSPARENT,
@@ -47,7 +47,7 @@ class Ship(Image):
     VERTICAL = "vertical"
     HORIZONTAL = "horizontal"
 
-    def __init__(self, name: str, boxes: Sequence[Tuple[int, int]], orient: str):
+    def __init__(self, name: str, boxes: Sequence[tuple[int, int]], orient: str):
         Image.__init__(self, RESOURCES.IMG[name])
         self.name = name
         self.__orient = Ship.VERTICAL
@@ -57,7 +57,7 @@ class Ship(Image):
         self.orient = orient
         self.__boxes_covered = list()
 
-    def get_setup(self) -> Dict[str, Any]:
+    def get_setup(self) -> dict[str, Any]:
         return {"name": self.name, "boxes": self.boxes_pos, "orient": self.orient}
 
     @property
@@ -112,7 +112,7 @@ class Navy(Grid):
         self.ships_list = DrawableList()
         self.box_hit_img = DrawableList()
 
-    def load_setup(self, setup: Sequence[Dict[str, Any]]) -> None:
+    def load_setup(self, setup: Sequence[dict[str, Any]]) -> None:
         for ship_infos in setup:
             self.add_ship(Ship(**ship_infos))
 
@@ -124,7 +124,7 @@ class Navy(Grid):
         self.set_box_clickable(True)
 
     @property
-    def map(self) -> Dict[Tuple[int, int], int]:
+    def map(self) -> dict[tuple[int, int], int]:
         navy_map = {box.pos: Navy.BOX_NO_HIT if box.state == Button.NORMAL else Navy.BOX_HATCH for box in self.boxes}
         for box_pos in filter(lambda pos: navy_map[pos] == Navy.BOX_HATCH, navy_map):
             for ship in self.ships:
@@ -322,7 +322,7 @@ class AI:
         self.box_hitted.clear()
         self.possibilities = [(i, j) for i in range(NB_LINES_BOXES) for j in range(NB_COLUMNS_BOXES)]
 
-    def play(self, navy_map: Dict[Tuple[int, int], int]) -> Tuple[int, int]:
+    def play(self, navy_map: dict[tuple[int, int], int]) -> tuple[int, int]:
         for box_pos in filter(lambda pos: navy_map[pos] == Navy.BOX_SHIP_DESTROYED, self.box_hitted.copy()):
             self.box_hitted.remove(box_pos)
         for box_pos in filter(lambda pos: navy_map[pos] != Navy.BOX_NO_HIT, self.possibilities.copy()):
@@ -333,7 +333,7 @@ class AI:
             return self.track_ship(navy_map)
         return random.choice(self.possibilities)
 
-    def track_ship(self, navy_map: Dict[Tuple[int, int], int]) -> Tuple[int, int]:
+    def track_ship(self, navy_map: dict[tuple[int, int], int]) -> tuple[int, int]:
         if len(self.box_hitted) == 1:
             return self.find_ship(navy_map, *self.box_hitted[0])
         self.box_hitted.sort()
@@ -351,7 +351,7 @@ class AI:
             exit(1)
         return random.choice(potential_boxes)
 
-    def find_ship(self, navy_map: Dict[Tuple[int, int], int], line: int, column: int) -> Tuple[int, int]:
+    def find_ship(self, navy_map: dict[tuple[int, int], int], line: int, column: int) -> tuple[int, int]:
         offsets = [
             (0, -1),
             (-1, 0),
@@ -428,7 +428,7 @@ class Gameplay(Window):
         self.text_finish = Text("Finish !!!", font=(None, 120), color=WHITE)
         self.game_finished = False
 
-    def start(self, navy_setup: Sequence[Dict[str, Any]], ai_setup=None) -> None:
+    def start(self, navy_setup: Sequence[dict[str, Any]], ai_setup=None) -> None:
         self.player_grid.load_setup(navy_setup)
         self.opposite_grid.ai_setup = ai_setup or list()
         self.turn_checker.turn = self.get_default_turn()
@@ -491,7 +491,7 @@ class Gameplay(Window):
         self.turn_checker.resize_all_sprites(width=self.opposite_grid.left - self.player_grid.right - 150)
         self.turn_checker.move(center=self.center)
 
-    def hit_a_box(self, navy: Navy, box: Union[Tuple[int, int], Box]):
+    def hit_a_box(self, navy: Navy, box: Union[tuple[int, int], Box]):
         if isinstance(box, (list, tuple)):
             box = navy.get_box(*box)
         hitted = navy.box_hit(box)

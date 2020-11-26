@@ -1,6 +1,6 @@
 # -*- coding: Utf-8 -*
 
-from typing import Tuple, Optional, Any, Union, Callable, Dict, Iterator
+from typing import Optional, Any, Union, Callable, Iterator
 import pygame
 from pygame.sprite import Sprite
 from pygame.math import Vector2
@@ -34,7 +34,7 @@ class Drawable(Sprite, ThemedObject):
         if self in Drawable.__trace:
             Drawable.__trace.remove(self)
 
-    def __getitem__(self, name: str) -> Union[int, Tuple[int, int]]:
+    def __getitem__(self, name: str) -> Union[int, tuple[int, int]]:
         return getattr(self.rect, name)
 
     def __setitem__(self, name: str, value: Any) -> None:
@@ -100,11 +100,11 @@ class Drawable(Sprite, ThemedObject):
         self.__mask = pygame.mask.from_surface(self.__surface)
 
     @property
-    def scale(self) -> Tuple[float, float]:
+    def scale(self) -> tuple[float, float]:
         return self.__scale
 
     @scale.setter
-    def scale(self, scale: Tuple[float, float]) -> None:
+    def scale(self, scale: tuple[float, float]) -> None:
         scale_w, scale_h = scale
         self.__scale = max(scale_w, 0), max(scale_h, 0)
         self.image = self.__surface_without_scale
@@ -169,7 +169,7 @@ class Drawable(Sprite, ThemedObject):
             return
         self.image = pygame.transform.rotate(self.__surface_without_scale, angle)
 
-    def rotate_through_point(self, angle: float, point: Union[Tuple[int, int], Vector2]) -> None:
+    def rotate_through_point(self, angle: float, point: Union[tuple[int, int], Vector2]) -> None:
         angle %= 360
         if angle == 0:
             return
@@ -186,14 +186,14 @@ class Drawable(Sprite, ThemedObject):
         self.__animation.start_in_background(master, at_every_frame, after_animation)
 
     @staticmethod
-    def surface_rotate(surface: pygame.Surface, rect: pygame.Rect, angle: float, point: Union[Tuple[int, int], Vector2]) -> Tuple[pygame.Surface, pygame.Rect]:
+    def surface_rotate(surface: pygame.Surface, rect: pygame.Rect, angle: float, point: Union[tuple[int, int], Vector2]) -> tuple[pygame.Surface, pygame.Rect]:
         offset = Vector2(rect.center) - Vector2(point)
         rotated_surface = pygame.transform.rotate(surface, angle)
         rotated_offset = offset.rotate(-angle)
         return rotated_surface, rotated_surface.get_rect(center=point + rotated_offset)
 
     @staticmethod
-    def surface_resize(surface: pygame.Surface, size: Optional[Union[int, Tuple[int, int]]] = None,
+    def surface_resize(surface: pygame.Surface, size: Optional[Union[int, tuple[int, int]]] = None,
              width: Optional[int] = None, height: Optional[int] = None,
              min_width: Optional[int] = None, min_height: Optional[int] = None,
              max_width: Optional[int] = None, max_height: Optional[int] = None,
@@ -239,7 +239,7 @@ class Drawable(Sprite, ThemedObject):
             surface = scale_func(surface, (width, height))
         return surface
 
-    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
+    def set_size(self, *size: Union[int, tuple[int, int]], smooth=True) -> None:
         size = size if len(size) == 2 else size[0]
         try:
             self.image = self.surface_resize(self.__surface_without_scale, size=size, smooth=smooth)
@@ -382,7 +382,7 @@ class AnimationRotation(AbstractAnimationClass):
     def default(self) -> None:
         self.__rotate(self.__angle, self.__pivot)
 
-    def __rotate(self, angle: float, point: Union[Tuple[int, int], Vector2, None]) -> None:
+    def __rotate(self, angle: float, point: Union[tuple[int, int], Vector2, None]) -> None:
         if point is None:
             self.drawable.rotate(angle)
         else:
@@ -503,7 +503,7 @@ class Animation:
         self.__start_window_callback(master, at_every_frame, after_animation, default_image, default_pos, only_move)
 
     def __start_window_callback(self, master, at_every_frame: Optional[Callable[..., Any]], after_animation: Optional[Callable[..., Any]],
-                                default_image: pygame.Surface, default_pos: Tuple[int, int], only_move: bool) -> None:
+                                default_image: pygame.Surface, default_pos: tuple[int, int], only_move: bool) -> None:
         if not only_move:
             self.__drawable.image = default_image
         self.__drawable.center = default_pos

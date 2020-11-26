@@ -1,7 +1,7 @@
 # -*- coding: Utf-8 -*
 
 import random
-from typing import Iterator, Sequence, Dict, List, Tuple
+from typing import Iterator, Sequence
 import pygame
 from my_pygame import Window, Dialog, Image, ImageButton, Button, Text, RectangleShape, CircleShape
 from my_pygame import ButtonListHorizontal, ButtonListVertical, DrawableListVertical, Clickable, Cursor
@@ -111,7 +111,7 @@ class FourInARowGrid(ButtonListHorizontal):
         return self.list
 
     @property
-    def map(self) -> Dict[Tuple[int, int], int]:
+    def map(self) -> dict[tuple[int, int], int]:
         return {(box.row, box.col): box.value for column in self.columns for box in column.boxes}
 
     def after_drawing(self, surface: pygame.Surface) -> None:
@@ -343,7 +343,7 @@ class FourInARowGameplay(Window):
             self.player_turn = (self.player_turn % 2) + 1
         self.allow_all_events()
 
-    def check_victory(self) -> List[Tuple[int, int]]:
+    def check_victory(self) -> list[tuple[int, int]]:
         grid = self.grid.map
         grid_pos_getter = [
             lambda row, col, index: (row, col + index),         # Check row (->)
@@ -365,7 +365,7 @@ class FourInARowGameplay(Window):
                     all_box_pos.extend(filter(lambda pos: pos not in all_box_pos, box_pos))
         return all_box_pos
 
-    def highlight_line(self, line: List[Tuple[int, int]], highlight=True):
+    def highlight_line(self, line: list[tuple[int, int]], highlight=True):
         for row, col in line:
             box = self.grid.columns[col].boxes[row]
             if highlight:

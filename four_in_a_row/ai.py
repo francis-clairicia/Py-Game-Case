@@ -2,7 +2,6 @@
 
 import math
 import random
-from typing import Dict, Tuple, List
 
 class FourInARowAI:
 
@@ -29,10 +28,10 @@ class FourInARowAI:
         self.__level = lvl
 
     @staticmethod
-    def get_available_levels() -> Tuple[str, ...]:
+    def get_available_levels() -> tuple[str, ...]:
         return tuple(FourInARowAI.__LEVELS)
 
-    def play(self, grid: Dict[Tuple[int, int], int]) -> int:
+    def play(self, grid: dict[tuple[int, int], int]) -> int:
         print("--------->")
         available_columns = self.__get_available_columns(grid)
         if len(available_columns) == 1:
@@ -53,10 +52,10 @@ class FourInARowAI:
             return random.choice(columns_to_avoid[2] or columns_to_avoid[1])
         return self.__level_function_dict[self.__level](grid, list(filter(lambda col: col not in all_columns_to_avoid, available_columns)))
 
-    def __get_available_columns(self, grid: Dict[Tuple[int, int], int]) -> List[int]:
+    def __get_available_columns(self, grid: dict[tuple[int, int], int]) -> list[int]:
         return list(col for row, col in filter(lambda pos: (pos[0] == 0 and grid[pos] == 0), grid))
 
-    def __check_for_line(self, grid: Dict[Tuple[int, int], int]) -> int:
+    def __check_for_line(self, grid: dict[tuple[int, int], int]) -> int:
         grid_pos_func_2d_list = [
             [lambda row, col, index: (row, col - index), lambda row, col, index: (row, col + index)],                 # Row (<->)
             [lambda row, col, index: (row + index, col), lambda row, col, index: tuple()],                            # Column (|)
@@ -77,7 +76,7 @@ class FourInARowAI:
                         return col
         return -1
 
-    def __get_columns_to_avoid(self, grid: Dict[Tuple[int, int], int], player: int) -> List[int]:
+    def __get_columns_to_avoid(self, grid: dict[tuple[int, int], int], player: int) -> list[int]:
         grid_pos_func_2d_list = [
             [lambda row, col, index: (row, col - index), lambda row, col, index: (row, col + index)],                 # Row (<->)
             [lambda row, col, index: (row + index, col - index), lambda row, col, index: (row - index, col + index)], # Diagonal (/)
@@ -96,11 +95,11 @@ class FourInARowAI:
                     columns.append(col)
         return columns
 
-    def __level_easy(self, grid: Dict[Tuple[int, int], int], valid_columns: List[int]) -> int:
+    def __level_easy(self, grid: dict[tuple[int, int], int], valid_columns: list[int]) -> int:
         print("Full random")
         return random.choice(valid_columns)
 
-    def __level_medium(self, grid: Dict[Tuple[int, int], int], valid_columns: List[int]) -> int:
+    def __level_medium(self, grid: dict[tuple[int, int], int], valid_columns: list[int]) -> int:
         ## First strategy
         last_row = max(pos[0] for pos in grid)
         middle_col = math.ceil(max(pos[1] for pos in grid) / 2)

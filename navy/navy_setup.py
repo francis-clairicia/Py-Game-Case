@@ -3,7 +3,7 @@
 import random
 import socket
 from math import sin, cos
-from typing import Tuple, Sequence, Dict, Any
+from typing import Sequence, Any
 import pygame
 from my_pygame import Window
 from my_pygame import Image, ImageButton, Button, RectangleShape, Text
@@ -14,7 +14,7 @@ from .constants import RESOURCES, NB_LINES_BOXES, NB_COLUMNS_BOXES, BOX_SIZE, SH
 from .game import Gameplay
 
 class BoxSetup(Button, use_parent_theme=False):
-    def __init__(self, master, size: Tuple[int, int], pos: Tuple[int, int]):
+    def __init__(self, master, size: tuple[int, int], pos: tuple[int, int]):
         params = {
             "size": size,
             "bg": TRANSPARENT,
@@ -251,7 +251,7 @@ class NavySetup(Window):
             EnemyQuitGame(self).mainloop()
             self.stop()
 
-    def create_setup(self) -> Sequence[Dict[str, Dict[str, Any]]]:
+    def create_setup(self) -> Sequence[dict[str, dict[str, Any]]]:
         setup = list()
         for ship in self.ships:
             setup.append({

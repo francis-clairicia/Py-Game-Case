@@ -1,6 +1,5 @@
 # -*- coding: Utf-8 -*
 
-from typing import List
 from .focusable import Focusable
 from .window import Window
 from .grid import Grid, GridCell

@@ -1,6 +1,6 @@
 # -*- coding: Utf-8 -*
 
-from typing import Sequence, Iterable, Iterator, Any, Union, Type
+from typing import Sequence, Iterable, Iterator, Any, Union
 import pygame
 from .drawable import Drawable
 from .focusable import Focusable
@@ -129,7 +129,7 @@ class DrawableList:
     def drawable(self) -> Sequence[Drawable]:
         return self.find_objects(Drawable)
 
-    def find_objects(self, obj_type: Type[object]) -> Sequence[object]:
+    def find_objects(self, obj_type: type[object]) -> Sequence[object]:
         obj_list = list()
         for obj in self.__list:
             if isinstance(obj, obj_type):

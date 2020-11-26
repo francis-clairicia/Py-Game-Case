@@ -4,7 +4,7 @@ import socket
 import select
 import struct
 import pickle
-from typing import List, Tuple, Any, Optional
+from typing import Any, Optional
 from .thread import threaded_function
 from .clock import Clock
 
@@ -74,7 +74,7 @@ class ServerSocket:
             self.__socket.listen(self.__listen)
 
     @property
-    def clients(self) -> List[socket.socket]:
+    def clients(self) -> list[socket.socket]:
         return self.__clients
 
     @threaded_function
@@ -107,11 +107,11 @@ class ServerSocket:
         self.__socket = None
         self.__port = -1
 
-    def handler(self, data_recieved: List[Tuple[socket.socket, str, dict]]) -> None:
+    def handler(self, data_recieved: list[tuple[socket.socket, str, dict]]) -> None:
         for client_who_send, msg, data in data_recieved:
             self.send_to_all_clients(msg, data, filter_function=lambda client: client != client_who_send)
 
-    def __check_for_disconnected_clients(self, data_recieved: List[Tuple[socket.socket, str, dict]]) -> None:
+    def __check_for_disconnected_clients(self, data_recieved: list[tuple[socket.socket, str, dict]]) -> None:
         for client_who_send, msg, data in data_recieved:
             if msg == QUIT:
                 print(f"{client_who_send.getpeername()} disconnected")
@@ -133,7 +133,7 @@ class ServerSocket:
             self.new_client_connected(client)
             self.clients.append(client)
 
-    def __clients_to_read(self) -> List[socket.socket]:
+    def __clients_to_read(self) -> list[socket.socket]:
         try:
             clients_to_read = select.select(self.clients, [], [], 0.05)[0]
         except:
@@ -202,7 +202,7 @@ class ClientSocket:
             if not isinstance(msg, dict):
                 continue
             print(f"Client - Recieved {msg}")
-            self.__msg.update(msg)
+            self.__msg |= msg
         self.__socket.close()
         self.__socket = None
 

@@ -1,6 +1,6 @@
 # -*- coding: Utf-8 -*
 
-from typing import Tuple, Optional, Union, Any, Callable, Dict
+from typing import Optional, Union, Any, Callable
 import pygame
 from pygame.event import Event
 from .focusable import Focusable
@@ -182,7 +182,7 @@ class Clickable(Focusable):
         elif event.type == pygame.MOUSEBUTTONDOWN:
             self.focus_leave()
 
-    def __handle_mouse_position(self, mouse_pos: Tuple[int, int]) -> None:
+    def __handle_mouse_position(self, mouse_pos: tuple[int, int]) -> None:
         if not self.__enable_mouse or (hasattr(self, "is_shown") and getattr(self, "is_shown")() is False):
             return
         if Focusable.actual_mode_is(Focusable.MODE_MOUSE):
@@ -228,7 +228,7 @@ class Clickable(Focusable):
     def on_click_up(self, event: Event) -> None:
         pass
 
-    def on_mouse_motion(self, mouse_pos: Tuple[int, int]) -> None:
+    def on_mouse_motion(self, mouse_pos: tuple[int, int]) -> None:
         pass
 
     def on_hover(self) -> None:

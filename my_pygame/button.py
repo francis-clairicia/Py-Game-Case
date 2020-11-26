@@ -1,6 +1,6 @@
 # -*- coding: Utf-8 -*
 
-from typing import Optional, Any, Callable, Union, Tuple
+from typing import Optional, Any, Callable, Union
 import pygame
 from pygame.font import Font
 from .image import Image
@@ -129,7 +129,7 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
             self.__text.move_ip(*self.__text_active_offset)
         self.__text.draw(surface)
 
-    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
+    def set_size(self, *size: Union[int, tuple[int, int]], smooth=True) -> None:
         RectangleShape.set_size(self, *size, smooth=smooth)
         self.__custom_size = self.size
 

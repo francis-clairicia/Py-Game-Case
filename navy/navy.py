@@ -3,7 +3,7 @@
 import socket
 import select
 import pygame
-from typing import Type, Union
+from typing import Union
 from my_pygame import MainWindow, Window, RectangleShape, Image, Button, DrawableListVertical, ButtonListVertical, Form, Scale, Text, CountDown, Entry
 from my_pygame import Dialog
 from my_pygame import BLACK, GREEN, GREEN_DARK, GREEN_LIGHT, YELLOW, TRANSPARENT

@@ -1,6 +1,5 @@
 # -*- coding: Utf-8 -*
 
-from typing import Tuple
 import pygame
 from .progress import ProgressBar
 from .clickable import Clickable
@@ -20,7 +19,7 @@ class Scale(Clickable, ProgressBar):
         self.master.bind_key(pygame.K_KP_MINUS, self.key_event, hold=True)
         self.master.bind_key(pygame.K_KP_PLUS, self.key_event, hold=True)
 
-    def on_mouse_motion(self, mouse_pos: Tuple[int, int]) -> None:
+    def on_mouse_motion(self, mouse_pos: tuple[int, int]) -> None:
         if self.active:
             self.percent = (mouse_pos[0] - self.x) / self.width
             self.call_update()

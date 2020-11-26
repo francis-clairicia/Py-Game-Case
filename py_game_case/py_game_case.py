@@ -3,6 +3,7 @@
 import sys
 import subprocess
 from typing import Callable, Sequence
+import psutil
 import pygame
 from my_pygame import MainWindow, Window, Image, Button, Sprite, RectangleShape, HorizontalGradientShape
 from my_pygame import ButtonListVertical, DrawableListHorizontal
@@ -12,7 +13,7 @@ from .constants import RESOURCES, GAMES, SETTINGS
 from .settings import SettingsWindow
 from .version import __version__
 
-class GameProcess(subprocess.Popen):
+class GameProcess(psutil.Popen):
 
     def __init__(self, game_id: str):
         if sys.argv[0].endswith((".py", ".pyw")):
@@ -25,6 +26,17 @@ class GameProcess(subprocess.Popen):
     @property
     def game_id(self) -> str:
         return self.__game_id
+
+class GameProcessList(list):
+
+    def launch(self, game_id: str) -> None:
+        self.append(GameProcess(game_id))
+
+    def check_for_terminated_games(self) -> list[GameProcess]:
+        process_list = list(filter(lambda process: not process.is_running(), self))
+        for process in process_list:
+            self.remove(process)
+        return process_list
 
 class TitleButton(Button):
 
@@ -97,7 +109,7 @@ class PyGameCase(MainWindow):
         self.image_game_preview = Sprite()
         self.bg = DrawableListHorizontal()
         left_color = BLACK
-        right_color = set_color_alpha(BLACK, 50)
+        right_color = set_color_alpha(BLACK, 60)
         self.bg.add(
             RectangleShape(self.w * 0.25, self.h, left_color),
             HorizontalGradientShape(self.w * 0.5, self.h, left_color, right_color),
@@ -116,7 +128,7 @@ class PyGameCase(MainWindow):
             self.buttons_game_dict[game_id] = button
         self.buttons_game_launch.add_multiple(self.buttons_game_dict.values())
         self.game_id = None
-        self.game_launched_processes = list()
+        self.game_launched_processes = GameProcessList()
 
         self.settings_section = SettingsWindow(self)
 
@@ -158,8 +170,7 @@ class PyGameCase(MainWindow):
 
     def update(self) -> None:
         if self.game_launched_processes:
-            for process in list(filter(lambda process: process.poll() is not None, self.game_launched_processes)):
-                self.game_launched_processes.remove(process)
+            for process in self.game_launched_processes.check_for_terminated_games():
                 self.buttons_game_dict[process.game_id].text = GAMES[process.game_id]
                 self.buttons_game_dict[process.game_id].state = Button.NORMAL
             if not self.game_launched_processes and not pygame.display.get_active():
@@ -179,7 +190,7 @@ class PyGameCase(MainWindow):
         self.image_game_preview.animate_move_in_background(self, speed=75, center=self.center)
 
     def launch_game(self, game_id: str) -> None:
-        self.game_launched_processes.append(GameProcess(game_id))
+        self.game_launched_processes.launch(game_id)
         self.buttons_game_dict[game_id].text = GAMES[game_id] + " - Running"
         self.buttons_game_dict[game_id].state = Button.DISABLED
         self.iconify()

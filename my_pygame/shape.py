@@ -1,6 +1,6 @@
 # -*- coding: Utf-8 -*
 
-from typing import List, Tuple, Union, Callable
+from typing import Union, Callable
 import pygame
 from pygame.math import Vector2
 from .drawable import Drawable
@@ -43,7 +43,7 @@ class Shape(Drawable, use_parent_theme=False):
     def outline_color(self, value: pygame.Color) -> None:
         self.__outline_color = pygame.Color(value) if value is not None else TRANSPARENT
 
-    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
+    def set_size(self, *size: Union[int, tuple[int, int]], smooth=True) -> None:
         Drawable.set_size(self, *(size), smooth=False)
         self.shape_update()
 
@@ -68,11 +68,11 @@ class PolygonShape(Shape):
         self.points = points
 
     @property
-    def points(self) -> List[Vector2]:
+    def points(self) -> list[Vector2]:
         return self.__points.copy()
 
     @points.setter
-    def points(self, points: List[Union[Tuple[int, int], Vector2]]) -> None:
+    def points(self, points: list[Union[tuple[int, int], Vector2]]) -> None:
         self.__points = points = [Vector2(point) for point in points]
         left = min((point.x for point in points), default=0)
         right = max((point.x for point in points), default=0)
@@ -209,7 +209,7 @@ class CircleShape(Shape):
         for key, value in filter(lambda key, value: key in self.__draw_params, kwargs.items()):
             self.__draw_params[key] = bool(value)
 
-    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
+    def set_size(self, *size: Union[int, tuple[int, int]], smooth=True) -> None:
         size = size if len(size) == 2 else size[0]
         if isinstance(size, (int, float)):
             size = int(size), int(size)
@@ -281,7 +281,7 @@ class GradientShape(Drawable, use_parent_theme=False):
                 size = self.size
             self.image = self.__gradient_type(size, start_color, end_color)
 
-    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
+    def set_size(self, *size: Union[int, tuple[int, int]], smooth=True) -> None:
         Drawable.set_size(self, *size, smooth=False)
         self.__update_image()
 
@@ -329,7 +329,7 @@ class RadialGradientShape(GradientShape, use_parent_theme=False):
             self.__radius = 0
         GradientShape.set_size(self, self.__radius * 2)
 
-    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
+    def set_size(self, *size: Union[int, tuple[int, int]], smooth=True) -> None:
         GradientShape.set_size(self, *size, smooth=smooth)
         self.__update_on_resize()
 

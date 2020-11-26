@@ -3,7 +3,7 @@
 import os
 import sys
 import configparser
-from typing import Callable, Any, Union, Optional, Type, Sequence, List, Tuple, Dict
+from typing import Callable, Any, Union, Optional, Sequence
 import pygame
 from .drawable import Drawable
 from .focusable import Focusable
@@ -29,7 +29,7 @@ def set_value_in_range(value: float, min_value: float, max_value: float) -> floa
     return value
 
 class WindowCallback(object):
-    def __init__(self, master, wait_time: float, callback: Callable[..., Any], args: Tuple[Any, ...], kwargs: Dict[str, Any]):
+    def __init__(self, master, wait_time: float, callback: Callable[..., Any], args: tuple[Any, ...], kwargs: dict[str, Any]):
         self.__master = master
         self.__wait_time = wait_time
         self.__callback = callback
@@ -217,7 +217,7 @@ class Window(object):
             Window.__fps_obj = Text(color=BLUE)
 
     @staticmethod
-    def __init_pygame(size: Tuple[int, int], flags: int, nb_joystick: int, resources: Optional[Resources], config: Optional[str]) -> None:
+    def __init_pygame(size: tuple[int, int], flags: int, nb_joystick: int, resources: Optional[Resources], config: Optional[str]) -> None:
         if not pygame.get_init():
             pygame.mixer.pre_init(Window.MIXER_FREQUENCY, Window.MIXER_SIZE, Window.MIXER_CHANNELS, Window.MIXER_BUFFER)
             status = pygame.init()
@@ -574,7 +574,7 @@ class Window(object):
             self.__callback_after.remove(window_callback)
 
     @staticmethod
-    def __bind_event(event_handler_dict: Dict[int, List[Callable[..., Any]]], event_type: int, callback: Callable[..., Any]) -> None:
+    def __bind_event(event_handler_dict: dict[int, list[Callable[..., Any]]], event_type: int, callback: Callable[..., Any]) -> None:
         event_list = event_handler_dict.get(event_type)
         if event_list is None:
             event_list = event_handler_dict[event_type] = list()
@@ -597,7 +597,7 @@ class Window(object):
             Window.bind_event_all_window(event_type, callback)
 
     @staticmethod
-    def __bind_mouse(mouse_handler_list: List[Callable[..., Any]], callback: Callable[..., Any]) -> None:
+    def __bind_mouse(mouse_handler_list: list[Callable[..., Any]], callback: Callable[..., Any]) -> None:
         mouse_handler_list.append(callback)
 
     def bind_mouse(self, callback: Callable[..., Any]) -> None:
@@ -608,7 +608,7 @@ class Window(object):
         Window.__bind_mouse(Window.__all_window_mouse_handler_list, callback)
 
     @staticmethod
-    def __bind_key(key_handler_dict: Dict[int, List[Callable[..., Any]]], key_state_dict: Dict[int, List[Callable[..., Any]]],
+    def __bind_key(key_handler_dict: dict[int, list[Callable[..., Any]]], key_state_dict: dict[int, list[Callable[..., Any]]],
                    key_value: int, callback: Callable[..., Any], hold: bool) -> None:
         if not hold:
             key_dict = key_handler_dict
@@ -626,8 +626,8 @@ class Window(object):
         Window.__bind_key(Window.__all_window_key_handler_dict, Window.__all_window_key_state_dict, key_value, callback, hold)
 
     @staticmethod
-    def __bind_joystick(joystick_handler_dict: Dict[int, Dict[str, List[Callable[..., Any]]]],
-                      joystick_state_dict: Dict[int, Dict[str, List[Callable[..., Any]]]],
+    def __bind_joystick(joystick_handler_dict: dict[int, dict[str, list[Callable[..., Any]]]],
+                      joystick_state_dict: dict[int, dict[str, list[Callable[..., Any]]]],
                       joy_id: int, action: str, callback: Callable[..., Any], state: bool) -> None:
         if not state:
             joystick_joy_id_dict = joystick_handler_dict
@@ -773,7 +773,7 @@ class Window(object):
             Window.__text_input_enabled = False
 
     @staticmethod
-    def create_server(port: int, listen: int) -> Tuple[str, int]:
+    def create_server(port: int, listen: int) -> tuple[str, int]:
         Window.__server_socket.bind(port, 1)
         if not Window.__server_socket.connected():
             raise OSError
@@ -795,7 +795,7 @@ class Window(object):
         return Window.__client_socket
 
     @staticmethod
-    def get_server_infos() -> Tuple[str, int]:
+    def get_server_infos() -> tuple[str, int]:
         return (Window.__server_socket.ip, Window.__server_socket.port)
 
     @staticmethod
@@ -807,7 +807,7 @@ class Window(object):
         Window.__server_socket.listen = listen
 
     @staticmethod
-    def set_server_socket_class_handler(ServerSocketHandler: Type[ServerSocket], *args, **kwargs) -> None:
+    def set_server_socket_class_handler(ServerSocketHandler: type[ServerSocket], *args, **kwargs) -> None:
         if not issubclass(ServerSocketHandler, ServerSocket):
             raise TypeError("The class must be a subclass of ServerSocket")
         Window.__server_socket = ServerSocketHandler(*args, **kwargs)
