@@ -26,10 +26,9 @@ class MetaThemedObject(type):
             theme = list()
         elif isinstance(theme, str):
             theme = [theme]
-        else:
-            theme = list(theme)
-        kwargs = cls.get_theme_options(*default_theme, *theme, **kwargs)
-        return type.__call__(cls, *args, **kwargs)
+        theme_kwargs = cls.get_theme_options(*default_theme, *theme)
+        theme_kwargs.update(kwargs)
+        return type.__call__(cls, *args, **theme_kwargs)
 
 class ThemedObject(object, metaclass=MetaThemedObject):
 
@@ -67,12 +66,11 @@ class ThemedObject(object, metaclass=MetaThemedObject):
                 _DEFAULT_THEME[cls] = list(filter(lambda theme: theme.startswith("__"), _DEFAULT_THEME[cls])) + name
 
     @classmethod
-    def get_theme_options(cls, *themes: str, **kwargs) -> Dict[str, Any]:
+    def get_theme_options(cls, *themes: str) -> Dict[str, Any]:
         theme_kwargs = dict()
         for t in themes:
             if cls not in _CLASSES_NOT_USING_PARENT_THEMES:
-                for class_ in reversed(list(get_all_parent_class(cls, do_not_search_for=_CLASSES_NOT_USING_PARENT_THEMES))):
-                    theme_kwargs.update(_THEMES.get(class_, dict()).get(t, dict()))
+                for parent in reversed(list(get_all_parent_class(cls, do_not_search_for=_CLASSES_NOT_USING_PARENT_THEMES))):
+                    theme_kwargs.update(_THEMES.get(parent, dict()).get(t, dict()))
             theme_kwargs.update(_THEMES.get(cls, dict()).get(t, dict()))
-        theme_kwargs.update(kwargs)
         return theme_kwargs

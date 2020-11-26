@@ -29,16 +29,18 @@ def set_value_in_range(value: float, min_value: float, max_value: float) -> floa
     return value
 
 class WindowCallback(object):
-    def __init__(self, master, callback: Callable[..., Any], wait_time: float):
+    def __init__(self, master, wait_time: float, callback: Callable[..., Any], args: Tuple[Any, ...], kwargs: Dict[str, Any]):
         self.__master = master
         self.__wait_time = wait_time
         self.__callback = callback
+        self.__args = args
+        self.__kwargs = kwargs
         self.__clock = Clock()
         self.__clock.restart()
 
     def __call__(self):
         if self.__clock.elapsed_time(self.__wait_time, restart=False):
-            self.__callback()
+            self.__callback(*self.__args, **self.__kwargs)
             self.kill()
 
     def kill(self) -> None:
@@ -60,7 +62,7 @@ class WindowDrawableList(DrawableList):
         self.__index = -1
 
     def remove(self, *obj_list: Drawable) -> None:
-        super().remove(*obj_list)
+        super().remove(*(obj_list))
         self.__update_index()
 
     def remove_from_index(self, index: int) -> None:
@@ -117,12 +119,6 @@ class WindowDrawableList(DrawableList):
         else:
             self.__index = -1
 
-    def remove_focus(self, obj: Focusable) -> None:
-        if obj not in self.__get_all_focusable():
-            return
-        if obj.has_focus():
-            self.set_focus(None)
-
     def focus_mode_update(self) -> None:
         if not Focusable.actual_mode_is(Focusable.MODE_MOUSE) and self.focus_get() is None:
             self.focus_next()
@@ -141,6 +137,9 @@ class WindowDrawableList(DrawableList):
                     obj_list.extend(obj.cells)
                 obj_list.extend(obj.find_objects(Focusable))
         return obj_list
+
+class WindowDrawable(Drawable):
+    pass
 
 class Window(object):
 
@@ -206,19 +205,19 @@ class Window(object):
             pygame.MOUSEWHEEL,
             pygame.JOYHATMOTION
         )
-        self.bind_multiple_event(focus_event, self.handle_focus)
+        self.bind_multiple_event(focus_event, self.__handle_focus)
         self.bind_event(pygame.KEYDOWN, self.__key_handler)
         self.bind_multiple_event([pygame.JOYBUTTONDOWN, pygame.JOYAXISMOTION, pygame.JOYHATMOTION], self.__joystick_handler)
-        self.bind_event(pygame.WINDOWEVENT, self.resize_event)
+        self.bind_event(pygame.WINDOWEVENT, self.__resize_event)
         self.__key_enabled = True
-        self.__screenshot = False
+        self.__screenshot = None
         self.__screenshot_window_callback = None
         self.bind_key(pygame.K_F11, lambda event: self.screenshot())
         if not Window.__fps_obj:
             Window.__fps_obj = Text(color=BLUE)
 
     @staticmethod
-    def _init_pygame(size: Tuple[int, int], flags: int, nb_joystick: int, resources: Optional[Resources], config: Optional[str]) -> None:
+    def __init_pygame(size: Tuple[int, int], flags: int, nb_joystick: int, resources: Optional[Resources], config: Optional[str]) -> None:
         if not pygame.get_init():
             pygame.mixer.pre_init(Window.MIXER_FREQUENCY, Window.MIXER_SIZE, Window.MIXER_CHANNELS, Window.MIXER_BUFFER)
             status = pygame.init()
@@ -262,12 +261,15 @@ class Window(object):
         return Window.__keyboard
 
     @property
-    def objects(self) -> DrawableList:
+    def objects(self) -> WindowDrawableList:
         return self.__objects
 
     def __setattr__(self, name, obj) -> None:
-        if isinstance(obj, (Drawable, DrawableList)) and name != "_Window__objects":
-            self.objects.add(obj)
+        if name != "_Window__objects" and hasattr(self, "_Window__objects"):
+            if hasattr(self, name) and isinstance(getattr(self, name), (Drawable, DrawableList)):
+                self.objects.remove(getattr(self, name))
+            if isinstance(obj, (Drawable, DrawableList)) and not isinstance(obj, (WindowDrawable, WindowDrawableList)):
+                self.objects.add(obj)
         return object.__setattr__(self, name, obj)
 
     def __delattr__(self, name) -> None:
@@ -331,12 +333,12 @@ class Window(object):
         Window.__default_cursor.set()
         self.place_objects()
         self.set_grid()
-        self.fps_update()
+        self.__fps_update()
         self.on_start_loop()
         while self.__loop:
             self.__main_clock.tick(Window.__fps)
-            self.handle_bg_music()
-            self.handle_cursor()
+            self.__handle_bg_music()
+            self.__handle_cursor()
             self.__callback_after.process()
             if Focusable.actual_mode_is(Focusable.MODE_KEY, Focusable.MODE_JOY) and Window.__all_window_key_enabled and self.__key_enabled:
                 self.objects.focus_mode_update()
@@ -385,14 +387,16 @@ class Window(object):
         pass
 
     def draw_screen(self, show_fps=True) -> None:
-        self.surface.fill(self.bg_color)
         if isinstance(self.__master, Window):
             self.__master.draw_screen(show_fps=False)
+        else:
+            self.surface.fill(self.bg_color)
         self.objects.draw(self.surface)
         if Window.__show_fps is True and show_fps and self.__show_fps_in_this_window:
             Window.__fps_obj.draw(self.surface)
-        if self.__screenshot:
-            pygame.draw.rect(self.surface, WHITE, self.rect, width=30)
+        if isinstance(self.__screenshot, Drawable):
+            self.__screenshot.draw(self.surface)
+            pygame.draw.rect(self.surface, WHITE, self.__screenshot.rect, width=3)
 
     def refresh(self, rect=None) -> None:
         pygame.display.update(rect or self.rect_to_update or self.rect)
@@ -427,10 +431,10 @@ class Window(object):
     def fps_is_shown() -> bool:
         return Window.__show_fps
 
-    def fps_update(self) -> None:
+    def __fps_update(self) -> None:
         if Window.__show_fps:
             Window.__fps_obj.message = f"{round(self.__main_clock.get_fps())} FPS"
-        self.after(500, self.fps_update)
+        self.after(500, self.__fps_update)
 
     def show_fps_in_this_window(self, status: bool) -> None:
         self.__show_fps_in_this_window = bool(status)
@@ -465,7 +469,7 @@ class Window(object):
                     callback(event)
 
     @staticmethod
-    def handle_cursor():
+    def __handle_cursor():
         Window.__cursor.set()
         Window.__cursor = Window.__default_cursor
 
@@ -512,13 +516,10 @@ class Window(object):
     def set_focus(self, obj: Focusable) -> None:
         self.objects.set_focus(obj)
 
-    def remove_focus(self, obj: Focusable) -> None:
-        self.objects.remove_focus(obj)
-
     def focus_mode(self, mode: str) -> None:
         Focusable.set_mode(mode)
 
-    def handle_focus(self, event: pygame.event.Event) -> None:
+    def __handle_focus(self, event: pygame.event.Event) -> None:
         if event.type in [pygame.KEYDOWN, pygame.JOYHATMOTION]:
             Focusable.set_mode(Focusable.MODE_KEY if event.type == pygame.KEYDOWN else Focusable.MODE_JOY)
             if event.type == pygame.KEYDOWN and event.key in [pygame.K_LEFT, pygame.K_RIGHT] and self.text_input_enabled():
@@ -551,7 +552,7 @@ class Window(object):
         else:
             Focusable.set_mode(Focusable.MODE_MOUSE)
 
-    def resize_event(self, event: pygame.event.Event) -> None:
+    def __resize_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.WINDOWEVENT and event.event in [pygame.WINDOWEVENT_RESIZED, pygame.WINDOWEVENT_SIZE_CHANGED, pygame.WINDOWEVENT_MAXIMIZED]:
             if self.width < Window.__min_size[0] or self.height < Window.__min_size[1]:
                 size = (max(self.width, Window.__min_size[0]), max(self.height, Window.__min_size[1]))
@@ -563,8 +564,8 @@ class Window(object):
     def set_minimum_window_size(width: int, height: int) -> None:
         Window.__min_size = max(width, 0), max(height, 0)
 
-    def after(self, milliseconds: float, callback: Callable[..., Any]) -> WindowCallback:
-        window_callback = WindowCallback(self, callback, milliseconds)
+    def after(self, milliseconds: float, callback: Callable[..., Any], *args: Any, **kwargs: Any) -> WindowCallback:
+        window_callback = WindowCallback(self, milliseconds, callback, args, kwargs)
         self.__callback_after.append(window_callback)
         return window_callback
 
@@ -648,20 +649,24 @@ class Window(object):
         Window.__bind_joystick(Window.__all_window_joystick_handler_dict, Window.__all_window_joystick_state_dict, joy_id, action, callback, state)
 
     def screenshot(self) -> None:
-        if not self.__screenshot:
-            self.__screenshot = True
+        if isinstance(self.__screenshot, WindowDrawable):
             self.remove_window_callback(self.__screenshot_window_callback)
+            self.__hide_screenshot_frame()
+            self.draw_screen()
         i = 1
-        while os.path.isfile(os.path.join(sys.path[0], f"screenshot_{i}.png")):
+        path = os.path.join(sys.path[0], "screenshot_{}.png")
+        while os.path.isfile(path.format(i)):
             i += 1
-        pygame.image.save(self.surface, os.path.join(sys.path[0], f"screenshot_{i}.png"))
+        pygame.image.save(self.surface, path.format(i))
+        self.__screenshot = WindowDrawable(self.surface, width=0.15 * self.width)
+        self.__screenshot.move(right=self.right - 20, top=20)
         self.__screenshot_window_callback = self.after(1000, self.__hide_screenshot_frame)
 
     def __hide_screenshot_frame(self) -> None:
-        self.__screenshot = False
+        self.__screenshot = None
         self.__screenshot_window_callback = None
 
-    def handle_bg_music(self) -> None:
+    def __handle_bg_music(self) -> None:
         if (not Window.__enable_music or self.bg_music is None) and pygame.mixer.get_busy():
             self.stop_music()
         elif Window.__enable_music and self.bg_music is not None and (not pygame.mixer.music.get_busy() or Window.__actual_music is None or Window.__actual_music != self.bg_music):
@@ -752,10 +757,9 @@ class Window(object):
         return Window.__text_input_enabled
 
     @staticmethod
-    def enable_text_input(default_rect: pygame.Rect) -> None:
+    def enable_text_input() -> None:
         if not Window.__text_input_enabled:
             pygame.key.start_text_input()
-            pygame.key.set_text_input_rect(default_rect)
             Window.__default_key_repeat = pygame.key.get_repeat()
             pygame.key.set_repeat(500, 50)
             Window.__text_input_enabled = True
@@ -803,10 +807,10 @@ class Window(object):
         Window.__server_socket.listen = listen
 
     @staticmethod
-    def set_server_socket_class_handler(ServerSocketHandler: Type[ServerSocket]) -> None:
+    def set_server_socket_class_handler(ServerSocketHandler: Type[ServerSocket], *args, **kwargs) -> None:
         if not issubclass(ServerSocketHandler, ServerSocket):
             raise TypeError("The class must be a subclass of ServerSocket")
-        Window.__server_socket = ServerSocketHandler()
+        Window.__server_socket = ServerSocketHandler(*args, **kwargs)
 
     surface = property(lambda self: pygame.display.get_surface())
     rect = property(lambda self: self.surface.get_rect())
@@ -836,5 +840,5 @@ class Window(object):
 class MainWindow(Window):
 
     def __init__(self, size=(0, 0), flags=0, bg_color=BLACK, bg_music=None, nb_joystick=0, resources=None, config=None):
-        Window._init_pygame(size, flags, nb_joystick, resources, config)
+        Window._Window__init_pygame(size, flags, nb_joystick, resources, config)
         super().__init__(bg_color=bg_color, bg_music=bg_music)

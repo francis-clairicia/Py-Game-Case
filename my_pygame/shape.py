@@ -44,13 +44,16 @@ class Shape(Drawable, use_parent_theme=False):
         self.__outline_color = pygame.Color(value) if value is not None else TRANSPARENT
 
     def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
-        Drawable.set_size(self, *size, smooth=False)
+        Drawable.set_size(self, *(size), smooth=False)
+        self.shape_update()
 
     def set_width(self, width: float, smooth=True)-> None:
         Drawable.set_width(self, width, smooth=False)
+        self.shape_update()
 
     def set_height(self, height: float, smooth=True) -> None:
         Drawable.set_height(self, height, smooth=False)
+        self.shape_update()
 
     def shape_update(self) -> None:
         pass
@@ -85,6 +88,8 @@ class PolygonShape(Shape):
         self.shape_update()
 
     def shape_update(self) -> None:
+        self.__image_points = [Vector2(self.width * x, self.height * y) for x, y in self.__image_points_percent]
+        self.move()
         if len(self.points) > 2:
             pygame.draw.polygon(self.image, self.color, self.__image_points)
         self.mask_update()
@@ -112,22 +117,6 @@ class PolygonShape(Shape):
             point.x += x
             point.y += y
 
-    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
-        Shape.set_size(self, *size, smooth=smooth)
-        self.__update_points_on_resize()
-
-    def set_width(self, width: float, smooth=True)-> None:
-        Shape.set_width(self, width, smooth=smooth)
-        self.__update_points_on_resize()
-
-    def set_height(self, height: float, smooth=True) -> None:
-        Shape.set_height(self, height, smooth=smooth)
-        self.__update_points_on_resize()
-
-    def __update_points_on_resize(self) -> None:
-        self.__image_points = [Vector2(self.width * x, self.height * y) for x, y in self.__image_points_percent]
-        self.move()
-
 class RectangleShape(Shape):
 
     def __init__(self, width: int, height: int, color: pygame.Color, *, outline=0, outline_color=BLACK,
@@ -141,8 +130,7 @@ class RectangleShape(Shape):
             "border_bottom_right_radius": border_bottom_right_radius
         }
         Shape.__init__(self, color=color, outline=outline, outline_color=outline_color)
-        Shape.set_size(self, width, height)
-        self.shape_update()
+        self.set_size(width, height)
 
     def shape_update(self) -> None:
         self.image = create_surface(self.size)
@@ -159,18 +147,6 @@ class RectangleShape(Shape):
     def config(self, **kwargs) -> None:
         for key, value in filter(lambda key, value: key in self.__draw_params, kwargs.items()):
             self.__draw_params[key] = int(value)
-
-    def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
-        Shape.set_size(self, *size, smooth=smooth)
-        self.shape_update()
-
-    def set_width(self, width: float, smooth=True)-> None:
-        Shape.set_width(self, width, smooth=smooth)
-        self.shape_update()
-
-    def set_height(self, height: float, smooth=True) -> None:
-        Shape.set_height(self, height, smooth=smooth)
-        self.shape_update()
 
     border_radius = property(
         lambda self: self.__draw_params["border_radius"],
@@ -214,13 +190,10 @@ class CircleShape(Shape):
 
     @radius.setter
     def radius(self, value: int) -> None:
-        self.__radius = int(value)
-        if self.__radius < 0:
-            self.__radius = 0
-        Shape.set_size(self, self.__radius * 2)
-        self.shape_update()
+        self.set_size(max(int(value), 0) * 2)
 
     def shape_update(self) -> None:
+        self.__radius = min(self.width // 2, self.height // 2)
         self.image = create_surface(self.size)
         pygame.draw.circle(self.image, self.color, (self.radius, self.radius), self.radius, **self.__draw_params)
         self.mask_update()
@@ -237,20 +210,16 @@ class CircleShape(Shape):
             self.__draw_params[key] = bool(value)
 
     def set_size(self, *size: Union[int, Tuple[int, int]], smooth=True) -> None:
-        Shape.set_size(self, *size, smooth=smooth)
-        self.__update_on_resize()
+        size = size if len(size) == 2 else size[0]
+        if isinstance(size, (int, float)):
+            size = int(size), int(size)
+        Shape.set_size(self, min(size), smooth=smooth)
 
     def set_width(self, width: float, smooth=True)-> None:
-        Shape.set_width(self, width, smooth=smooth)
-        self.__update_on_resize()
+        Shape.set_size(self, width, smooth=smooth)
 
     def set_height(self, height: float, smooth=True) -> None:
-        Shape.set_height(self, height, smooth=smooth)
-        self.__update_on_resize()
-
-    def __update_on_resize(self) -> None:
-        self.__radius = min(self.width // 2, self.height // 2)
-        self.shape_update()
+        Shape.set_size(self, height, smooth=smooth)
 
     draw_top_left = property(
         lambda self: self.__draw_params["draw_top_left"],

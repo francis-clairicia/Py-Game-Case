@@ -433,6 +433,8 @@ class Animation:
         self.__animations = dict.fromkeys(self.__animations_order)
         self.__clock = pygame.time.Clock()
         self.__window_callback = None
+        self.__save_window_callback = None
+        self.__save_animations = None
 
     def move(self, speed=1, milliseconds=10, **position):
         self.stop()
@@ -513,18 +515,30 @@ class Animation:
                     animation.default()
             if callable(at_every_frame):
                 at_every_frame()
-            self.__window_callback = master.after(0, lambda: self.__start_window_callback(master, at_every_frame, after_animation, default_image, default_pos, only_move))
+            self.__window_callback = master.after(
+                0, self.__start_window_callback,
+                master=master, at_every_frame=at_every_frame, after_animation=after_animation,
+                default_image=default_image, default_pos=default_pos, only_move=only_move
+            )
         else:
             for animation in self.__iter_animations():
                 animation.default()
             if callable(at_every_frame):
                 at_every_frame()
             self.stop()
+            self.__save_animations = self.__save_window_callback = None
             if callable(after_animation):
                 after_animation()
 
     def stop(self) -> None:
         if self.__window_callback is not None:
             self.__window_callback.kill()
+            self.__save_window_callback = self.__window_callback
             self.__window_callback = None
+            self.__save_animations = self.__animations.copy()
             self.__clear()
+
+    def restart(self) -> None:
+        if self.__window_callback is None and self.__save_window_callback is not None:
+            self.__animations = self.__save_animations.copy()
+            self.__save_window_callback()

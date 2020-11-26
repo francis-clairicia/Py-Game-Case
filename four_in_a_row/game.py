@@ -205,7 +205,6 @@ class FourInARowGameplay(Window):
                 1: {1: player_name, 2: enemy_name}[player],
                 2: {1: enemy_name, 2: player_name}[player]
             }
-            self.left_options[0].callback = self.LAN_restart
         else:
             player_name = str(player_name) if player_name is not None else "P1"
             enemy_name = str(enemy_name) if enemy_name is not None else "P2"
@@ -215,7 +214,6 @@ class FourInARowGameplay(Window):
             }
             if self.enemy == AI:
                 self.ai.level = ai_level
-            self.left_options[0].callback = self.restart
         self.mainloop()
 
     def on_start_loop(self) -> None:
@@ -223,12 +221,14 @@ class FourInARowGameplay(Window):
         self.score_player = self.score_enemy = 0
         self.player_who_start_first = 0
         self.text_winner.hide()
-        self.restart()
+        self.restart(init=True)
 
     def on_quit(self) -> None:
         self.stop_connection()
 
-    def restart(self) -> None:
+    def restart(self, init=False) -> None:
+        if not init:
+            self.client_socket.send("restart")
         self.grid.reset()
         self.remove_window_callback(self.__highlight_line_window_callback)
         if self.player_who_start_first == 0:
@@ -251,10 +251,6 @@ class FourInARowGameplay(Window):
         self.player_who_start_first = self.player_turn
         self.text_winner.hide()
         self.text_drawn_match.hide()
-
-    def LAN_restart(self) -> None:
-        self.client_socket.send("restart")
-        self.restart()
 
     def place_objects(self) -> None:
         self.logo.move(centerx=self.centerx, top=10)
@@ -284,7 +280,7 @@ class FourInARowGameplay(Window):
             for column in filter(lambda column: not column.full(), self.grid.columns):
                 column.set_enabled(self.player_turn == self.player)
             if self.enemy == AI and self.player_turn == 2:
-                self.after(500, lambda: self.play(self.ai.play(self.grid.map)))
+                self.after(500, self.play, self.ai.play(self.grid.map))
 
     @property
     def score_player(self) -> int:
@@ -376,7 +372,7 @@ class FourInARowGameplay(Window):
                 box.circle.color = GREEN
             else:
                 box.value = box.value
-        self.__highlight_line_window_callback = self.after(500, lambda: self.highlight_line(line, not highlight))
+        self.__highlight_line_window_callback = self.after(500, self.highlight_line, line=line, highlight=not highlight)
 
     def update_winner(self):
         if self.player_turn == 1:

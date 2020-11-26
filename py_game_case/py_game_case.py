@@ -30,6 +30,7 @@ class TitleButton(Button):
 
     def __init__(self, master: Window, on_hover: Callable[..., None], *args, **kwargs):
         super().__init__(master, *args, **kwargs)
+        self.focus_on_hover(True)
         self.__on_hover = on_hover
 
     def after_drawing(self, surface: pygame.Surface) -> None:
@@ -41,7 +42,6 @@ class TitleButton(Button):
         pygame.draw.line(surface, highlight_color, self.bottomleft, self.bottomright, width=highlight_thickness)
 
     def on_hover(self) -> None:
-        self.focus_set()
         super().on_hover()
         self.__on_hover()
 

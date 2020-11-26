@@ -20,6 +20,7 @@ class Clickable(Focusable):
         self.__callback = None
         self.__hover = False
         self.__active = False
+        self.__focus_on_hover = False
         self.__hover_sound = hover_sound
         self.__on_click_sound = on_click_sound
         self.__disabled_sound = disabled_sound
@@ -30,9 +31,9 @@ class Clickable(Focusable):
         self.disabled_cursor = disabled_cursor
         self.callback = callback
         self.state = state
-        master.bind_multiple_event((pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.JOYBUTTONDOWN), self.event_click_down)
-        master.bind_multiple_event((pygame.KEYUP, pygame.MOUSEBUTTONUP, pygame.JOYBUTTONUP), self.event_click_up)
-        master.bind_mouse(self.handle_mouse_position)
+        master.bind_multiple_event((pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.JOYBUTTONDOWN), self.__event_click_down)
+        master.bind_multiple_event((pygame.KEYUP, pygame.MOUSEBUTTONUP, pygame.JOYBUTTONUP), self.__event_click_up)
+        master.bind_mouse(self.__handle_mouse_position)
 
     @property
     def master(self) -> Window:
@@ -58,10 +59,10 @@ class Clickable(Focusable):
         if value not in (Clickable.NORMAL, Clickable.DISABLED):
             return
         self.__state = value
-        if self.active:
-            self.on_active_set()
-        elif self.hover:
+        if self.hover:
             self.on_hover()
+            if self.active:
+                self.on_active_set()
         else:
             self.on_leave()
         self.on_change_state()
@@ -91,9 +92,6 @@ class Clickable(Focusable):
             if not active:
                 self.focus_set()
                 self.on_active_set()
-        else:
-            if active:
-                self.on_active_unset()
 
     @property
     def hover(self) -> bool:
@@ -107,6 +105,8 @@ class Clickable(Focusable):
         if status is True:
             if not hover:
                 self.play_hover_sound()
+                if self.__focus_on_hover:
+                    self.focus_set()
                 self.on_hover()
                 if self.active:
                     self.on_active_set()
@@ -146,7 +146,7 @@ class Clickable(Focusable):
         elif self.state == Clickable.DISABLED and isinstance(self.disabled_sound, pygame.mixer.Sound):
             self.disabled_sound.play()
 
-    def valid_click(self, event: Event, down: bool) -> bool:
+    def __valid_click(self, event: Event, down: bool) -> bool:
         mouse_event = pygame.MOUSEBUTTONDOWN if down else pygame.MOUSEBUTTONUP
         key_event = pygame.KEYDOWN if down else pygame.KEYUP
         joy_event = pygame.JOYBUTTONDOWN if down else pygame.JOYBUTTONUP
@@ -160,29 +160,29 @@ class Clickable(Focusable):
                 return True
         return False
 
-    def event_click_up(self, event: Event) -> None:
+    def __event_click_up(self, event: Event) -> None:
         if hasattr(self, "is_shown") and getattr(self, "is_shown")() is False:
             return
         if not self.active:
             return
         self.active = False
         self.on_click_up(event)
-        if self.valid_click(event, down=False):
+        if self.__valid_click(event, down=False):
             self.play_on_click_sound()
             self.on_hover()
             if self.__callback and self.state != Clickable.DISABLED:
                 self.__callback()
 
-    def event_click_down(self, event: Event) -> None:
+    def __event_click_down(self, event: Event) -> None:
         if hasattr(self, "is_shown") and getattr(self, "is_shown")() is False:
             return
-        if self.valid_click(event, down=True):
+        if self.__valid_click(event, down=True):
             self.active = True
             self.on_click_down(event)
         elif event.type == pygame.MOUSEBUTTONDOWN:
             self.focus_leave()
 
-    def handle_mouse_position(self, mouse_pos: Tuple[int, int]) -> None:
+    def __handle_mouse_position(self, mouse_pos: Tuple[int, int]) -> None:
         if not self.__enable_mouse or (hasattr(self, "is_shown") and getattr(self, "is_shown")() is False):
             return
         if Focusable.actual_mode_is(Focusable.MODE_MOUSE):
@@ -216,6 +216,9 @@ class Clickable(Focusable):
         if not Focusable.actual_mode_is(Focusable.MODE_MOUSE) and self.take_focus():
             self.hover = self.has_focus()
 
+    def focus_on_hover(self, status: bool) -> None:
+        self.__focus_on_hover = bool(status)
+
     def on_change_state(self) -> None:
         pass
 
@@ -235,7 +238,4 @@ class Clickable(Focusable):
         pass
 
     def on_active_set(self) -> None:
-        pass
-
-    def on_active_unset(self) -> None:
         pass

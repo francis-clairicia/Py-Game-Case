@@ -8,12 +8,7 @@ class Cursor:
     __actual_cursor = None
 
     def __init__(self, cursor: Union[int, Sequence[Tuple[int, ...]]]):
-        if isinstance(cursor, int):
-            self.__cursor_setter = pygame.mouse.set_system_cursor
-            self.__cursor = [cursor]
-        else:
-            self.__cursor_setter = pygame.mouse.set_cursor
-            self.__cursor = cursor
+        self.__cursor = cursor
 
     @classmethod
     def from_xbm_file(cls, cursorfile: str, maskfile: str):
@@ -26,5 +21,8 @@ class Cursor:
 
     def set(self) -> None:
         if Cursor.__actual_cursor is not self:
-            self.__cursor_setter(*self.__cursor)
+            if isinstance(self.__cursor, int):
+                pygame.mouse.set_system_cursor(self.__cursor)
+            else:
+                pygame.mouse.set_cursor(*self.__cursor)
             Cursor.__actual_cursor = self

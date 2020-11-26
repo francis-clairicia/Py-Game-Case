@@ -448,12 +448,12 @@ class Gameplay(Window):
         if self.player_grid.destroyed():
             self.opposite_grid.set_box_clickable(False)
             self.highlight_ships(self.opposite_grid.show_all_non_destroyed_ships())
-            self.after(3000, lambda victory=False: self.finish(victory))
+            self.after(3000, self.finish, victory=False)
             self.game_finished = True
         elif self.opposite_grid.destroyed():
             self.opposite_grid.set_box_clickable(False)
             self.player_grid.send_non_destroyed_ships()
-            self.after(3000, lambda victory=True: self.finish(victory))
+            self.after(3000, self.finish, victory=True)
             self.game_finished = True
         elif self.client_socket.connected():
             if self.client_socket.recv("attack"):
@@ -481,7 +481,7 @@ class Gameplay(Window):
         for ship in ships:
             for box in ship.boxes_covered:
                 box.hover = not box.hover
-        self.after(500, lambda: self.highlight_ships(ships))
+        self.after(500, self.highlight_ships, ships)
 
     def place_objects(self):
         self.button_back.move(x=20, y=20)
@@ -506,4 +506,4 @@ class Gameplay(Window):
         if self.turn_checker.turn is True:
             self.opposite_grid.set_box_clickable(True)
         if self.turn_checker.turn is False and not self.client_socket.connected() and not self.player_grid.destroyed():
-            self.after(1000, lambda: self.hit_a_box(self.player_grid, self.ai.play(self.player_grid.map)))
+            self.after(1000, self.hit_a_box, self.player_grid, self.ai.play(self.player_grid.map))

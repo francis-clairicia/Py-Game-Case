@@ -21,7 +21,6 @@ class Entry(Clickable, RectangleShape):
         )
         self.__nb_chars = max(int(width), 1)
         width, height = self.__text.font.size("M" * self.__nb_chars)
-        self.__cursor_height = height
         RectangleShape.__init__(self, width + 15, height + 10, bg, **kwargs)
         Clickable.__init__(
             self, master, callback=self.start_edit, state=state, highlight_color=highlight_color, highlight_thickness=highlight_thickness,
@@ -81,8 +80,12 @@ class Entry(Clickable, RectangleShape):
         return self.__text.message
 
     def start_edit(self) -> None:
-        self.master.enable_text_input(self.rect)
+        self.master.enable_text_input()
         self.__cursor_animated = True
+
+    def stop_edit(self) -> None:
+        self.master.disable_text_input()
+        self.__cursor_animated = False
 
     def on_focus_leave(self) -> None:
         self.stop_edit()
@@ -91,42 +94,27 @@ class Entry(Clickable, RectangleShape):
         if self.has_focus():
             self.stop_edit()
 
-    def stop_edit(self) -> None:
-        self.master.disable_text_input()
-        self.__cursor_animated = False
-
-    def move(self, **kwargs) -> None:
-        RectangleShape.move(self, **kwargs)
-        try:
-            if self.__edit():
-                pygame.key.set_text_input_rect(self.rect)
-        except AttributeError:
-            pass
-
     def key_press(self, event: pygame.event.Event) -> None:
-        if self.__edit():
-            self.__show_cursor = True
-            self.__cursor_animation_clock.restart()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_BACKSPACE:
-                    self.__text.message = self.__text.message[:self.cursor - 1] + self.__text.message[self.cursor:]
-                    self.cursor -= 1
-                elif event.key == pygame.K_DELETE:
-                    self.__text.message = self.__text.message[:self.cursor] + self.__text.message[self.cursor + 1:]
-                elif event.key == pygame.K_LEFT:
-                    self.cursor -= 1
-                elif event.key == pygame.K_RIGHT:
-                    self.cursor += 1
-                elif event.key == pygame.K_HOME:
-                    self.cursor = 0
-                elif event.key == pygame.K_END:
-                    self.cursor = len(self.__text.message)
-            elif event.type == pygame.TEXTEDITING:
-                if event.length <= self.__nb_chars:
-                    self.__text.message = event.text
-                    self.cursor = event.start
-            elif event.type == pygame.TEXTINPUT:
-                new_text = self.__text.message[:self.cursor] + event.text + self.__text.message[self.cursor:]
-                if len(new_text) <= self.__nb_chars:
-                    self.__text.message = new_text
-                    self.cursor += len(event.text)
+        if not self.__edit():
+            return
+        self.__show_cursor = True
+        self.__cursor_animation_clock.restart()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_BACKSPACE:
+                self.__text.message = self.__text.message[:self.cursor - 1] + self.__text.message[self.cursor:]
+                self.cursor -= 1
+            elif event.key == pygame.K_DELETE:
+                self.__text.message = self.__text.message[:self.cursor] + self.__text.message[self.cursor + 1:]
+            elif event.key == pygame.K_LEFT:
+                self.cursor -= 1
+            elif event.key == pygame.K_RIGHT:
+                self.cursor += 1
+            elif event.key == pygame.K_HOME:
+                self.cursor = 0
+            elif event.key == pygame.K_END:
+                self.cursor = len(self.__text.message)
+        elif event.type == pygame.TEXTINPUT:
+            new_text = self.__text.message[:self.cursor] + event.text + self.__text.message[self.cursor:]
+            if len(new_text) <= self.__nb_chars:
+                self.__text.message = new_text
+                self.cursor += len(event.text)

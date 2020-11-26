@@ -89,7 +89,7 @@ class Focusable:
 
     def focus_leave(self) -> None:
         if self.has_focus():
-            self.__master.remove_focus(self)
+            self.__master.set_focus(None)
 
     def focus_update(self) -> None:
         pass
