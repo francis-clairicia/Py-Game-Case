@@ -191,8 +191,8 @@ class Clickable(Focusable):
                 self.on_mouse_motion(mouse_pos)
             else:
                 self.hover = False
-        if self.hover:
-            self.master.set_temporary_window_cursor(self.hover_cursor if self.state == Clickable.NORMAL else self.disabled_cursor)
+            if self.hover:
+                self.master.set_temporary_window_cursor(self.hover_cursor if self.state == Clickable.NORMAL else self.disabled_cursor)
 
     def set_enabled_mouse(self, status: bool) -> None:
         self.__enable_mouse = bool(status)

@@ -119,7 +119,7 @@ class DrawableList:
 
     @property
     def list(self) -> Sequence[Drawable]:
-        return tuple(self.__list)
+        return self.__list
 
     @property
     def focusable(self) -> Sequence[Focusable]:
@@ -169,13 +169,13 @@ class AbstractDrawableListAligned(DrawableList):
     def __init__(self, offset: int, orient: str, bg_color=None, draw=True, justify="center"):
         DrawableList.__init__(self, bg_color=bg_color, draw=draw)
         self.__background = Drawable()
-        self.__offset = offset
+        self.__offset = max(int(offset), 0)
         self.__orient = orient
         values = {
-            AbstractDrawableListAligned.HORIZONTAL: ("left", "right", "width", "centerx"),
-            AbstractDrawableListAligned.VERTICAL: ("top", "bottom", "height", "centery")
+            AbstractDrawableListAligned.HORIZONTAL: ("left", "right", "centerx"),
+            AbstractDrawableListAligned.VERTICAL: ("top", "bottom", "centery")
         }
-        self.__start, self.__end, self.__size, self.__center = values[orient]
+        self.__start, self.__end, self.__center = values[orient]
         justify_dict = {
             AbstractDrawableListAligned.HORIZONTAL: {
                 "top": "top",
@@ -196,15 +196,26 @@ class AbstractDrawableListAligned(DrawableList):
 
     @offset.setter
     def offset(self, value: int) -> None:
-        self.__offset = int(value)
+        self.__offset = max(int(value), 0)
         self.__align_all_objects()
+
+    @property
+    def rect(self) -> pygame.Rect:
+        left = min((obj.left for obj in self.list), default=0)
+        top = min((obj.top for obj in self.list), default=0)
+        size = {"width": 0, "height": 0}
+        size_sum = {self.HORIZONTAL: "width", self.VERTICAL: "height"}[self.__orient]
+        size_max = {self.HORIZONTAL: "height", self.VERTICAL: "width"}[self.__orient]
+        size[size_sum] = sum(getattr(obj, size_sum) for obj in self.list) + (self.offset * (len(self.list) - 1))
+        size[size_max] = max(getattr(obj, size_max) for obj in self.list)
+        return pygame.Rect(left, top, size["width"], size["height"])
 
     def add_multiple(self, iterable_of_objects: Iterable[Drawable]) -> None:
         DrawableList.add_multiple(self, iterable_of_objects)
         self.__align_all_objects()
 
     def remove(self, obj: Drawable, *objs: Drawable) -> None:
-        DrawableList.remove(self, obj, *objs)
+        DrawableList.remove(self, obj, *(objs))
         self.__align_all_objects()
 
     def remove_from_index(self, index: int) -> None:

@@ -4,6 +4,7 @@ from .window import Window, MainWindow
 from .drawable import Drawable, Animation
 from .focusable import Focusable
 from .clickable import Clickable
+from .theme import ThemeNamespace
 from .image import Image
 from .text import Text
 from .shape import Shape, RectangleShape, CircleShape, PolygonShape, HorizontalGradientShape, VerticalGradientShape, RadialGradientShape, SquaredGradientShape

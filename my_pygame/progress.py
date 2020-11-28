@@ -116,10 +116,11 @@ class ProgressBar(RectangleShape):
 
     @property
     def percent(self) -> float:
-        return float(self.__percent)
+        return self.__percent
 
     @percent.setter
     def percent(self, value: float) -> None:
+        value = float(value)
         if value > 1:
             value = 1
         elif value < 0:
@@ -129,10 +130,11 @@ class ProgressBar(RectangleShape):
 
     @property
     def value(self) -> float:
-        return float(self.__value)
+        return self.__value
 
     @value.setter
     def value(self, value: float) -> None:
+        value = float(value)
         if value > self.__end:
             value = self.__end
         elif value < self.__start:

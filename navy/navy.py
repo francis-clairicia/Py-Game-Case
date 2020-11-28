@@ -70,14 +70,14 @@ class PlayerServer(Dialog):
             self.lets_play_countdown.start(at_end=self.play)
 
     def play(self):
-        self.start_game.mainloop()
+        self.start_game.start(1)
         self.stop()
 
 class PlayerClient(Dialog):
 
     def __init__(self, master, **kwargs):
         Dialog.__init__(self, master=master, bg_color=GREEN_DARK, **kwargs)
-        self.start_game = NavySetup(2)
+        self.start_game = master.start_game
         self.text_title = Text("Connect to Player 1", font=("calibri", 50))
         self.form = Form(self)
         self.form.add_entry("IP", Text("IP address", font=("calibri", 40), color=YELLOW), Entry(self, width=15, font=("calibri", 30), bg=GREEN, highlight_color=YELLOW, outline=2))
@@ -120,7 +120,7 @@ class PlayerClient(Dialog):
             self.lets_play_countdown.start(at_end=self.play)
 
     def play(self):
-        self.start_game.mainloop()
+        self.start_game.start(2)
         self.stop()
 
 class Options(Dialog):
@@ -136,19 +136,21 @@ class Options(Dialog):
         }
         self.scale_music = Scale(
             self, **params_for_all_scales,
-            default=Window.music_volume() * 100,
             callback=lambda value, percent: Window.set_music_volume(percent)
         )
         self.scale_music.show_label("Music: ", Scale.S_LEFT, font=Button.get_theme_options("option")["font"])
         self.scale_music.show_value(Scale.S_RIGHT, font=Button.get_theme_options("option")["font"])
         self.scale_sound = Scale(
             self, **params_for_all_scales,
-            default=Window.sound_volume() * 100,
             callback=lambda value, percent: Window.set_sound_volume(percent)
         )
         self.scale_sound.show_label("SFX: ", Scale.S_LEFT, font=Button.get_theme_options("option")["font"])
         self.scale_sound.show_value(Scale.S_RIGHT, font=Button.get_theme_options("option")["font"])
         self.button_cancel = Button(self, "Return to menu", theme="option", callback=self.stop)
+
+    def on_start_loop(self) -> None:
+        self.scale_music.percent = Window.music_volume()
+        self.scale_sound.percent = Window.sound_volume()
 
     def place_objects(self) -> None:
         self.text_title.move(centerx=self.frame.centerx, top=self.frame.top + 50)
@@ -156,15 +158,9 @@ class Options(Dialog):
         self.scale_sound.move(centerx=self.frame.centerx, top=self.frame.centery + 20)
         self.button_cancel.move(centerx=self.frame.centerx, bottom=self.frame.bottom - 10)
 
-    def on_quit(self) -> None:
-        self.save_config()
-
 class NavyWindow(MainWindow):
     def __init__(self):
-        MainWindow.__init__(self, size=(1280, 720), flags=pygame.DOUBLEBUF, bg_music=RESOURCES.MUSIC["menu"], resources=RESOURCES, config=WINDOW_CONFIG_FILE)
-        self.set_icon(RESOURCES.IMG["icon"])
-        self.set_title(f"Navy - v{__version__}")
-        self.disable_key_joy_focus_for_all_window()
+        MainWindow.__init__(self, title=f"Navy - v{__version__}", size=(1280, 720), bg_music=RESOURCES.MUSIC["menu"], resources=RESOURCES, config=WINDOW_CONFIG_FILE)
 
         self.bg = Image(RESOURCES.IMG["menu_bg"], size=self.size)
         self.logo = Image(RESOURCES.IMG["logo"])
@@ -196,7 +192,7 @@ class NavyWindow(MainWindow):
             "hide_all_without": [self.bg, self.logo]
         }
 
-        self.start_game = NavySetup(1)
+        self.start_game = NavySetup()
         self.multiplayer_server = PlayerServer(self, **params_for_dialogs)
         self.multiplayer_client = PlayerClient(self, **params_for_dialogs)
         self.dialog_credits = Credits(self, **params_for_dialogs)
@@ -204,7 +200,7 @@ class NavyWindow(MainWindow):
 
         self.menu_buttons = ButtonListVertical(offset=30)
         self.menu_buttons.add(
-            Button(self, "Play against AI", theme="title", callback=self.start_game.mainloop),
+            Button(self, "Play against AI", theme="title", callback=lambda: self.start_game.start(1)),
             Button(self, "Play as P1", theme="title", callback=self.multiplayer_server.mainloop),
             Button(self, "Play as P2", theme="title", callback=self.multiplayer_client.mainloop),
             Button(self, "Quit", theme="title", callback=self.stop)
@@ -212,6 +208,12 @@ class NavyWindow(MainWindow):
 
         self.button_credits = Button(self, "Credits", theme="title", callback=self.dialog_credits.mainloop)
         self.button_settings = Button(self, theme="title", img=Image(RESOURCES.IMG["settings"], size=self.button_credits.height - 20), callback=self.dialog_options.mainloop)
+
+    def on_start_loop(self) -> None:
+        self.disable_key_joy_focus_for_all_window()
+
+    def on_quit(self) -> None:
+        self.enable_key_joy_focus_for_all_window()
 
     def place_objects(self):
         self.bg.center = self.center

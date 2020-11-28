@@ -415,9 +415,9 @@ class FinishWindow(Window):
             self.stop()
 
 class Gameplay(Window):
-    def __init__(self, player: int):
+    def __init__(self):
         Window.__init__(self, bg_color=(0, 200, 255), bg_music=RESOURCES.MUSIC["gameplay"])
-        self.player_id = player
+        self.player_id = 0
         self.button_back = ImageButton(self, RESOURCES.IMG["arrow_blue"], rotate=180, size=50, callback=self.stop, highlight_color=YELLOW)
         self.player_grid = PlayerNavy(self, self.client_socket)
         self.opposite_grid = OppositeNavy(self, self.client_socket)

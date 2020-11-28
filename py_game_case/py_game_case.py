@@ -9,6 +9,7 @@ from my_pygame import MainWindow, Window, Image, Button, Sprite, RectangleShape,
 from my_pygame import ButtonListVertical, DrawableListHorizontal
 from my_pygame import TRANSPARENT, WHITE, BLACK, YELLOW
 from my_pygame import set_color_alpha, change_brightness
+from my_pygame import ThemeNamespace
 from .constants import RESOURCES, GAMES, SETTINGS
 from .settings import SettingsWindow
 from .version import __version__
@@ -74,10 +75,10 @@ class SettingsButton(Button):
 
 class PyGameCase(MainWindow):
 
+    RUNNING_STATE_SUFFIX = " - Running"
+
     def __init__(self):
-        super().__init__(size=(1280, 720), bg_color=(0, 0, 100), resources=RESOURCES)
-        self.set_title(f"Py-Game-Case - v{__version__}")
-        self.set_icon(RESOURCES.IMG["icon"])
+        super().__init__(title=f"Py-Game-Case - v{__version__}", size=(1280, 720), bg_color=(0, 0, 100), resources=RESOURCES)
 
         TitleButton.set_default_theme("default")
         TitleButton.set_theme("default", {
@@ -106,6 +107,8 @@ class PyGameCase(MainWindow):
             "highlight_thickness": 0
         })
 
+        self.launch_in_same_window = True
+
         self.image_game_preview = Sprite()
         self.bg = DrawableListHorizontal()
         left_color = BLACK
@@ -118,13 +121,14 @@ class PyGameCase(MainWindow):
         self.logo = Image(RESOURCES.IMG["logo"], width=self.bg[0].width)
 
         self.buttons_game_launch = ButtonListVertical(offset=30)
-        self.buttons_game_dict = dict()
-        for game_id, game_name in GAMES.items():
+        self.buttons_game_dict = dict[str, TitleButton]()
+        self.window_game_dict = dict[str, MainWindow]()
+        for game_id, game_infos in GAMES.items():
             button = TitleButton(
-                self, lambda game_id=game_id: self.show_preview(game_id), text=game_name,
+                self, lambda game_id=game_id: self.show_preview(game_id), text=game_infos["name"],
                 callback=lambda game_id=game_id: self.launch_game(game_id)
             )
-            self.image_game_preview.add_sprite(game_id, RESOURCES.IMG[game_id], size=self.size)
+            self.image_game_preview.add_sprite(game_id, RESOURCES.IMG[game_id], height=self.height)
             self.buttons_game_dict[game_id] = button
         self.buttons_game_launch.add_multiple(self.buttons_game_dict.values())
         self.game_id = None
@@ -146,7 +150,14 @@ class PyGameCase(MainWindow):
         self.button_settings.set_obj_on_side(on_bottom=self.buttons_game_launch[0], on_left=self.buttons_game_launch[0])
         self.buttons_game_launch.set_obj_on_side(on_top=self.button_settings, on_right=self.button_settings)
 
+    def __init_games(self) -> None:
+        if not self.window_game_dict:
+            for game_id, game_infos in GAMES.items():
+                with ThemeNamespace(game_id):
+                    self.window_game_dict[game_id] = game_infos["window"]()
+
     def on_start_loop(self):
+        self.__init_games()
         self.image_game_preview.right = self.left
         save_objects_center = list()
         for obj in self.objects.drawable:
@@ -159,8 +170,7 @@ class PyGameCase(MainWindow):
         self.objects.add(logo)
         logo.animate_move(self, speed=20, center=self.center)
         logo.animation.rotate(angle=360, offset=5).scale_width(self.logo.width, offset=7).start(self)
-        logo.center = self.center
-        logo.animate_move(self, speed=20, left=10, top=10)
+        logo.animate_move(self, speed=20, **self.logo.get_former_moves())
         self.objects.remove(logo)
         self.logo.show()
         for obj, center in zip(self.objects.drawable, save_objects_center):
@@ -171,7 +181,7 @@ class PyGameCase(MainWindow):
     def update(self) -> None:
         if self.game_launched_processes:
             for process in self.game_launched_processes.check_for_terminated_games():
-                self.buttons_game_dict[process.game_id].text = GAMES[process.game_id]
+                self.buttons_game_dict[process.game_id].text = GAMES[process.game_id]["name"]
                 self.buttons_game_dict[process.game_id].state = Button.NORMAL
             if not self.game_launched_processes and not pygame.display.get_active():
                 pass
@@ -187,13 +197,61 @@ class PyGameCase(MainWindow):
 
     def __show_preview(self) -> None:
         self.image_game_preview.set_sprite(self.game_id)
-        self.image_game_preview.animate_move_in_background(self, speed=75, center=self.center)
+        self.image_game_preview.animate_move_in_background(self, speed=75, right=self.right)
 
     def launch_game(self, game_id: str) -> None:
-        self.game_launched_processes.launch(game_id)
-        self.buttons_game_dict[game_id].text = GAMES[game_id] + " - Running"
-        self.buttons_game_dict[game_id].state = Button.DISABLED
-        self.iconify()
+        if not self.launch_in_same_window:
+            self.game_launched_processes.launch(game_id)
+            self.buttons_game_dict[game_id].text += PyGameCase.RUNNING_STATE_SUFFIX
+            self.buttons_game_dict[game_id].state = Button.DISABLED
+            self.iconify()
+        else:
+            self.game_id = game_id
+            self.image_game_preview.set_sprite(game_id)
+            self.image_game_preview.animate_move(self, speed=75, right=self.right)
+            window = self.window_game_dict[game_id]
+            self.__launch_animation(window)
+            window.mainloop(place_objects=False, start_loop_call=False)
+            if self.loop:
+                self.__stopped_game_animation()
+
+    def __launch_animation(self, window: MainWindow) -> None:
+        bg = RectangleShape(self.w, self.h, TRANSPARENT)
+        for alpha in range(0, 256, 10):
+            bg.color = set_color_alpha(WHITE, alpha)
+            self.draw_screen()
+            bg.draw(self.surface)
+            self.refresh()
+            pygame.event.pump()
+            pygame.time.wait(10)
+        window.place_objects()
+        window.on_start_loop()
+        for alpha in range(255, -1, -10):
+            bg.color = set_color_alpha(WHITE, alpha)
+            window.draw_screen()
+            bg.draw(self.surface)
+            self.refresh()
+            pygame.event.pump()
+            pygame.time.wait(10)
+
+    def __stopped_game_animation(self) -> None:
+        window = Image(self.get_last_screen_drawn(), size=self.size)
+        bg = RectangleShape(self.w, self.h, TRANSPARENT)
+        for alpha in range(0, 256, 10):
+            bg.color = set_color_alpha(BLACK, alpha)
+            self.surface.fill(BLACK)
+            window.draw(self.surface)
+            bg.draw(self.surface)
+            self.refresh()
+            pygame.event.pump()
+            pygame.time.wait(10)
+        for alpha in range(255, -1, -10):
+            bg.color = set_color_alpha(BLACK, alpha)
+            self.draw_screen()
+            bg.draw(self.surface)
+            self.refresh()
+            pygame.event.pump()
+            pygame.time.wait(10)
 
     def close(self) -> None:
         if self.game_launched_processes:

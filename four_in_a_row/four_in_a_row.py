@@ -206,10 +206,7 @@ class LANPlayingP2(Section):
 class FourInARowWindow(MainWindow):
 
     def __init__(self):
-        MainWindow.__init__(self, size=(1280, 720), flags=pygame.RESIZABLE, bg_color=BACKGROUND_COLOR, resources=RESOURCES, config=WINDOW_CONFIG_FILE)
-        self.set_title(f"4 in a row - v{__version__}")
-        self.set_icon(RESOURCES.IMG["icon"])
-        self.set_minimum_window_size(self.width, self.height)
+        MainWindow.__init__(self, title=f"4 in a row - v{__version__}", size=(1280, 720), bg_color=BACKGROUND_COLOR, resources=RESOURCES, config=WINDOW_CONFIG_FILE)
         self.logo = Image(RESOURCES.IMG["logo"])
 
         Text.set_default_theme("default")
@@ -264,7 +261,7 @@ class FourInARowWindow(MainWindow):
             "highlight_thickness": 3
         })
 
-        gameplay = FourInARowGameplay()
+        gameplay = FourInARowGameplay(self)
         ai_level_selector = AILevelSelectorSection(self, gameplay)
         local_playing = LocalPlayingSection(self, gameplay)
         lan_playing_server = LANPlayingP1(self, gameplay)

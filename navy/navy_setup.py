@@ -197,9 +197,9 @@ class WaitEnemy(Window):
         self.text.center = self.frame.center
 
 class NavySetup(Window):
-    def __init__(self, player_id: int):
+    def __init__(self):
         Window.__init__(self, bg_color=(0, 200, 255), bg_music=RESOURCES.MUSIC["setup"])
-        self.gameplay = Gameplay(player_id)
+        self.gameplay = Gameplay()
         self.count_down = CountDown(self, 60, "Time left: {seconds}", font=(None, 70), color=WHITE)
         self.start_count_down = lambda: self.count_down.start(at_end=self.timeout) if self.client_socket.connected() else None
         self.button_back = ImageButton(self, RESOURCES.IMG["arrow_blue"], rotate=180, size=50, callback=self.stop)
@@ -226,6 +226,10 @@ class NavySetup(Window):
     @property
     def boxes(self) -> Sequence[BoxSetup]:
         return self.navy_grid.drawable
+
+    def start(self, player_id: int) -> None:
+        self.gameplay.player_id = player_id
+        self.mainloop()
 
     def on_start_loop(self) -> None:
         self.start_count_down()
@@ -270,7 +274,7 @@ class NavySetup(Window):
         if not all(ship.on_map for ship in self.ships):
             return
         if not self.client_socket.connected():
-            ai_navy_setup = NavySetup(2)
+            ai_navy_setup = NavySetup()
             ai_navy_setup.shuffle()
             ai_setup = ai_navy_setup.create_setup()
         else:

@@ -78,12 +78,6 @@ class Drawable(Sprite, ThemedObject):
     def mask_update(self) -> None:
         self.__mask = pygame.mask.from_surface(self.__surface)
 
-    @staticmethod
-    def set_default_scale(scale_w: float, scale_h: float) -> None:
-        Drawable.__default_scale = max(scale_w, 0), max(scale_h, 0)
-        for drawable in Drawable.__trace:
-            drawable.scale = Drawable.__default_scale
-
     def draw(self, surface: pygame.Surface) -> None:
         if self.is_shown():
             self.before_drawing(surface)
@@ -117,6 +111,9 @@ class Drawable(Sprite, ThemedObject):
         self.__x = self.__rect.x
         self.__y = self.__rect.y
         self.__former_moves = kwargs
+
+    def get_former_moves(self) -> dict[str, Union[int, tuple[int, int]]]:
+        return self.__former_moves.copy()
 
     def move_ip(self, x: float, y: float) -> None:
         self.__x += x
@@ -306,6 +303,8 @@ class AnimationMove(AbstractAnimationClass):
     def __init__(self, drawable: Drawable, milliseconds: int, speed=1, **position):
         super().__init__(drawable, milliseconds)
         self.__position = position
+        self.__projection = Drawable()
+        self.__projection.move(**self.__position)
         self.__speed = speed
         self.__increment = 0
 
@@ -316,9 +315,8 @@ class AnimationMove(AbstractAnimationClass):
         if self.ready():
             self.__increment += 1
         length = self.__increment * self.__speed
-        projection = Drawable(self.drawable.image)
-        projection.move(**self.__position)
-        direction = Vector2(projection.center) - Vector2(self.drawable.center)
+        self.__projection.image = self.drawable.image
+        direction = Vector2(self.__projection.center) - Vector2(self.drawable.center)
         if direction.length() > 0 and length < direction.length():
             direction.scale_to_length(length)
             self.drawable.move_ip(direction.x, direction.y)
@@ -434,67 +432,65 @@ class Animation:
             if isinstance(animation, AbstractAnimationClass):
                 yield animation
 
+    def animation_set(self, animation: str) -> bool:
+        return isinstance(self.__animations[animation], AbstractAnimationClass)
+
     def __only_move_animation(self) -> bool:
-        return (isinstance(self.__animations["move"], AbstractAnimationClass) and all(not isinstance(anim, AbstractAnimationClass) for name, anim in self.__animations.items() if name != "move"))
+        return (self.animation_set("move") and all(self.animation_set(name) for name in self.__animations if name != "move"))
 
     def __clear(self) -> None:
         for key in self.__animations:
             self.__animations[key] = None
 
+    def __animate(self, at_every_frame: Optional[Callable[..., Any]], default_move: dict[str, Union[int, tuple[int, int]]]) -> None:
+        for animation in self.__iter_animations():
+            if animation.started():
+                animation()
+            else:
+                animation.default()
+        if not self.animation_set("move"):
+            self.__drawable.move(**default_move)
+        if callable(at_every_frame):
+            at_every_frame()
+
     def start(self, master, at_every_frame=None) -> None:
         default_image = self.__drawable.image
         default_pos = self.__drawable.center
+        default_move = self.__drawable.get_former_moves()
         only_move = self.__only_move_animation()
         while any(animation.started() for animation in self.__iter_animations()):
             self.__clock.tick(master.get_fps())
-            for animation in self.__iter_animations():
-                if animation.started():
-                    animation()
-                else:
-                    animation.default()
-            if callable(at_every_frame):
-                at_every_frame()
+            self.__animate(at_every_frame, default_move)
             master.draw_and_refresh(pump=True)
             if not only_move:
                 self.__drawable.image = default_image
             self.__drawable.center = default_pos
-        for animation in self.__iter_animations():
-            animation.default()
-        if callable(at_every_frame):
-            at_every_frame()
+        self.__animate(at_every_frame, default_move)
         master.draw_and_refresh()
         self.__clear()
 
     def start_in_background(self, master, at_every_frame=None, after_animation=None) -> None:
         default_image = self.__drawable.image
         default_pos = self.__drawable.center
+        default_move = self.__drawable.get_former_moves()
         only_move = self.__only_move_animation()
-        self.__start_window_callback(master, at_every_frame, after_animation, default_image, default_pos, only_move)
+        self.__start_window_callback(master, at_every_frame, after_animation, default_image, default_pos, default_move, only_move)
 
     def __start_window_callback(self, master, at_every_frame: Optional[Callable[..., Any]], after_animation: Optional[Callable[..., Any]],
-                                default_image: pygame.Surface, default_pos: tuple[int, int], only_move: bool) -> None:
+                                default_image: pygame.Surface, default_pos: tuple[int, int],
+                                default_move: dict[str, Union[int, tuple[int, int]]], only_move: bool) -> None:
         if not only_move:
             self.__drawable.image = default_image
         self.__drawable.center = default_pos
+        self.__animate(at_every_frame, default_move)
         if any(animation.started() for animation in self.__iter_animations()):
-            for animation in self.__iter_animations():
-                if animation.started():
-                    animation()
-                else:
-                    animation.default()
-            if callable(at_every_frame):
-                at_every_frame()
             self.__window_callback = master.after(
                 0, self.__start_window_callback,
                 master=master, at_every_frame=at_every_frame, after_animation=after_animation,
-                default_image=default_image, default_pos=default_pos, only_move=only_move
+                default_image=default_image, default_pos=default_pos, default_move=default_move, only_move=only_move
             )
         else:
-            for animation in self.__iter_animations():
-                animation.default()
-            if callable(at_every_frame):
-                at_every_frame()
-            self.stop()
+            self.__clear()
             self.__save_animations = self.__save_window_callback = None
             if callable(after_animation):
                 after_animation()

@@ -148,13 +148,9 @@ class Window(object):
 
     __main_window = None
     __resources = Resources()
-    __size = (0, 0)
-    __min_size = (0, 0)
-    __flags = 0
     __default_key_repeat = (0, 0)
     __text_input_enabled = False
     __all_opened = list()
-    __config_file = set_constant_file("window.ini", raise_error=False)
     __sound_volume = 50
     __music_volume = 50
     __enable_music = True
@@ -178,8 +174,6 @@ class Window(object):
     __client_socket = ClientSocket()
 
     def __init__(self, master=None, bg_color=BLACK, bg_music=None):
-        if not isinstance(Window.__main_window, Window):
-            Window.__main_window = self
         self.__master = master
         self.__main_clock = pygame.time.Clock()
         self.__loop = False
@@ -206,45 +200,12 @@ class Window(object):
         self.bind_multiple_event(focus_event, self.__handle_focus)
         self.bind_event(pygame.KEYDOWN, self.__key_handler)
         self.bind_multiple_event([pygame.JOYBUTTONDOWN, pygame.JOYAXISMOTION, pygame.JOYHATMOTION], self.__joystick_handler)
-        self.bind_event(pygame.WINDOWEVENT, self.__resize_event)
         self.__key_enabled = True
         self.__screenshot = None
         self.__screenshot_window_callback = None
         self.bind_key(pygame.K_F11, lambda event: self.screenshot())
         if not Window.__fps_obj:
             Window.__fps_obj = Text(color=BLUE)
-
-    @staticmethod
-    def __init_pygame(size: tuple[int, int], flags: int, nb_joystick: int, resources: Optional[Resources], config: Optional[str]) -> None:
-        if not pygame.get_init():
-            pygame.mixer.pre_init(Window.MIXER_FREQUENCY, Window.MIXER_SIZE, Window.MIXER_CHANNELS, Window.MIXER_BUFFER)
-            status = pygame.init()
-            if status[1] > 0:
-                sys.exit("Error on pygame initialization ({} modules failed to load)".format(status[1]))
-            if isinstance(config, str):
-                head, tail = os.path.split(config)
-                if tail:
-                    Window.__config_file = config
-                    if head and not os.path.isdir(head):
-                        os.makedirs(head)
-            Window.load_config()
-            Window.__joystick.set(nb_joystick)
-            Window.__default_event_binding()
-            if not isinstance(size, (list, tuple)) or len(size) != 2 or size[0] <= 0 or size[1] <= 0:
-                size = (0, 0)
-            surface = pygame.display.set_mode(size, flags)
-            pygame.event.clear()
-            Window.__min_size = Window.__size = surface.get_size()
-            Window.__flags = flags
-            if isinstance(resources, Resources):
-                Window.__resources = resources
-            Window.__resources.load()
-            Window.__resources.set_sfx_volume(Window.__sound_volume, Window.__enable_sound)
-
-    @staticmethod
-    def __default_event_binding() -> None:
-        Window.bind_multiple_event_all_window((pygame.JOYDEVICEADDED, pygame.CONTROLLERDEVICEADDED), Window.__joystick.event_connect)
-        Window.bind_multiple_event_all_window((pygame.JOYDEVICEREMOVED, pygame.CONTROLLERDEVICEREMOVED), Window.__joystick.event_disconnect)
 
     @property
     def main_window(self) -> bool:
@@ -325,26 +286,32 @@ class Window(object):
     def loop(self) -> bool:
         return self.__loop
 
-    def mainloop(self) -> int:
+    def mainloop(self, *, place_objects=True, start_loop_call=True) -> int:
         self.__loop = True
+        if not isinstance(Window.__main_window, Window):
+            Window.__main_window = self
         Window.__all_opened.append(self)
         Window.__default_cursor.set()
-        self.place_objects()
+        if place_objects:
+            self.place_objects()
         self.set_grid()
         self.__fps_update()
-        self.on_start_loop()
+        if start_loop_call:
+            self.on_start_loop()
         while self.__loop:
             self.__main_clock.tick(Window.__fps)
             self.__handle_bg_music()
             self.__handle_cursor()
             self.__callback_after.process()
-            if Focusable.actual_mode_is(Focusable.MODE_KEY, Focusable.MODE_JOY) and Window.__all_window_key_enabled and self.__key_enabled:
+            if Window.__all_window_key_enabled and self.__key_enabled:
                 self.objects.focus_mode_update()
             self.keyboard.update()
             self.update()
             self.draw_and_refresh()
             self.event_handler()
         self.__callback_after.clear()
+        if self.main_window:
+            Window.__main_window = None
         return 0
 
     def stop(self, force=False, sound=None) -> None:
@@ -363,7 +330,6 @@ class Window(object):
                 window.stop()
         if not Window.__all_opened and pygame.get_init():
             Window.stop_connection()
-            Window.save_config()
             pygame.quit()
 
     def close(self) -> None:
@@ -479,7 +445,7 @@ class Window(object):
     @staticmethod
     def set_window_cursor(cursor: Cursor):
         if isinstance(cursor, Cursor):
-            Window.__default_cursor = cursor
+            Window.__cursor = Window.__default_cursor = cursor
 
     def __key_handler(self, event: pygame.event.Event) -> None:
         for key_handler_dict in [Window.__all_window_key_handler_dict, self.__key_handler_dict]:
@@ -549,18 +515,6 @@ class Window(object):
                             self.objects.focus_obj_on_side(side_dict[value])
         else:
             Focusable.set_mode(Focusable.MODE_MOUSE)
-
-    def __resize_event(self, event: pygame.event.Event) -> None:
-        if event.type == pygame.WINDOWEVENT and event.event in [pygame.WINDOWEVENT_RESIZED, pygame.WINDOWEVENT_SIZE_CHANGED, pygame.WINDOWEVENT_MAXIMIZED]:
-            if self.width < Window.__min_size[0] or self.height < Window.__min_size[1]:
-                size = (max(self.width, Window.__min_size[0]), max(self.height, Window.__min_size[1]))
-                pygame.display.set_mode(size, flags=Window.__flags)
-            for window in Window.__all_opened:
-                window.place_objects()
-
-    @staticmethod
-    def set_minimum_window_size(width: int, height: int) -> None:
-        Window.__min_size = max(width, 0), max(height, 0)
 
     def after(self, milliseconds: float, callback: Callable[..., Any], *args: Any, **kwargs: Any) -> WindowCallback:
         window_callback = WindowCallback(self, milliseconds, callback, args, kwargs)
@@ -665,9 +619,9 @@ class Window(object):
         self.__screenshot_window_callback = None
 
     def __handle_bg_music(self) -> None:
-        if (not Window.__enable_music or self.bg_music is None) and pygame.mixer.get_busy():
+        if (not Window.__enable_music or self.bg_music is None):
             self.stop_music()
-        elif Window.__enable_music and self.bg_music is not None and (not pygame.mixer.music.get_busy() or Window.__actual_music is None or Window.__actual_music != self.bg_music):
+        elif Window.__enable_music and self.bg_music is not None and (Window.__actual_music is None or Window.__actual_music != self.bg_music):
             self.play_music(self.bg_music)
 
     @staticmethod
@@ -723,32 +677,6 @@ class Window(object):
     @staticmethod
     def get_sound_state() -> bool:
         return Window.__enable_sound
-
-    @staticmethod
-    def load_config() -> None:
-        config = configparser.ConfigParser()
-        config.read(Window.__config_file)
-        Window.set_music_volume(config.getfloat("MUSIC", "volume", fallback=Window.__music_volume) / 100)
-        Window.set_music_state(config.getboolean("MUSIC", "enable", fallback=Window.__enable_music))
-        Window.set_sound_volume(config.getfloat("SFX", "volume", fallback=Window.__sound_volume) / 100)
-        Window.set_sound_state(config.getboolean("SFX", "enable", fallback=Window.__enable_sound))
-
-    @staticmethod
-    def save_config() -> None:
-        config_dict = {
-            "MUSIC": {
-                "volume": round(Window.__music_volume * 100),
-                "enable": Window.get_music_state()
-            },
-            "SFX": {
-                "volume": round(Window.__sound_volume * 100),
-                "enable": Window.get_sound_state()
-            }
-        }
-        config = configparser.ConfigParser()
-        config.read_dict(config_dict)
-        with open(Window.__config_file, "w") as file:
-            config.write(file, space_around_delimiters=False)
 
     @staticmethod
     def text_input_enabled() -> bool:
@@ -837,6 +765,104 @@ class Window(object):
 
 class MainWindow(Window):
 
-    def __init__(self, size=(0, 0), flags=0, bg_color=BLACK, bg_music=None, nb_joystick=0, resources=None, config=None):
-        Window._Window__init_pygame(size, flags, nb_joystick, resources, config)
+    __config_file = str()
+    __default_config_file = set_constant_file("window.ini", raise_error=False)
+    __actual_config: Union[dict[str, Union[int, tuple[int, int], str, Resources]], None] = None
+    __last_image: Union[pygame.Surface, None] = None
+
+    def __init__(self, title=str(), size=(0, 0), flags=0, bg_color=BLACK, bg_music: Optional[str] = None,
+                 nb_joystick=0, resources: Optional[Resources] = None, config: Optional[str] = None):
+        if not isinstance(resources, Resources):
+            resources = Resources()
+        self.__window_config = {
+            "title": str(title) or "pygame window",
+            "size": size,
+            "flags": flags,
+            "nb_joystick": nb_joystick,
+            "resources": resources,
+            "config": config
+        }
+        if not pygame.get_init():
+            pygame.mixer.pre_init(Window.MIXER_FREQUENCY, Window.MIXER_SIZE, Window.MIXER_CHANNELS, Window.MIXER_BUFFER)
+            status = pygame.init()
+            if status[1] > 0:
+                sys.exit("Error on pygame initialization ({} modules failed to load)".format(status[1]))
+            self.__default_event_binding()
+            self.__set_mode(size, flags)
+        resources.load()
         super().__init__(bg_color=bg_color, bg_music=bg_music)
+
+    def __load_window_config(self, title: str, size: tuple[int, int], flags: int,
+                             nb_joystick: int, resources: Resources, config: Optional[str]) -> None:
+        self.__set_mode(size, flags)
+        self.set_title(title)
+        if "icon" in resources.IMG:
+            self.set_icon(resources.IMG["icon"])
+        if isinstance(config, str):
+            head, tail = os.path.split(config)
+            if tail:
+                MainWindow.__config_file = config
+                if head and not os.path.isdir(head):
+                    os.makedirs(head)
+        else:
+            MainWindow.__config_file = MainWindow.__default_config_file
+        Window._Window__resources = resources
+        self.load_config()
+        self.joystick.set(nb_joystick)
+
+    def __default_event_binding(self) -> None:
+        Window.bind_multiple_event_all_window((pygame.JOYDEVICEADDED, pygame.CONTROLLERDEVICEADDED), self.joystick.event_connect)
+        Window.bind_multiple_event_all_window((pygame.JOYDEVICEREMOVED, pygame.CONTROLLERDEVICEREMOVED), self.joystick.event_disconnect)
+
+    def mainloop(self, **kwargs) -> int:
+        save_config = self.__actual_config
+        self.__load_window_config(**self.__window_config)
+        MainWindow.__actual_config = self.__window_config
+        output = super().mainloop(**kwargs)
+        if pygame.get_init():
+            MainWindow.__last_image = self.surface.copy()
+            Window.stop_music()
+            if save_config is not None:
+                self.__load_window_config(**save_config)
+            MainWindow.__actual_config = save_config
+        return output
+
+    def stop(self, force=False, sound=None) -> None:
+        super().stop(force=force, sound=sound)
+        self.save_config()
+
+    @staticmethod
+    def get_last_screen_drawn() -> Union[pygame.Surface, None]:
+        return MainWindow.__last_image
+
+    @staticmethod
+    def load_config() -> None:
+        config = configparser.ConfigParser()
+        config.read(MainWindow.__config_file)
+        Window.set_music_volume(config.getfloat("MUSIC", "volume", fallback=50) / 100)
+        Window.set_music_state(config.getboolean("MUSIC", "enable", fallback=True))
+        Window.set_sound_volume(config.getfloat("SFX", "volume", fallback=50) / 100)
+        Window.set_sound_state(config.getboolean("SFX", "enable", fallback=True))
+
+    @staticmethod
+    def save_config() -> None:
+        config_dict = {
+            "MUSIC": {
+                "volume": round(Window.music_volume() * 100),
+                "enable": Window.get_music_state()
+            },
+            "SFX": {
+                "volume": round(Window.sound_volume() * 100),
+                "enable": Window.get_sound_state()
+            }
+        }
+        config = configparser.ConfigParser()
+        config.read_dict(config_dict)
+        with open(MainWindow.__config_file, "w") as file:
+            config.write(file, space_around_delimiters=False)
+
+    def __set_mode(self, size: tuple[int, int], flags: int) -> None:
+        if not isinstance(size, (list, tuple)) or len(size) != 2 or size[0] <= 0 or size[1] <= 0:
+            size = (0, 0)
+        surface = pygame.display.set_mode(size, flags)
+        pygame.event.clear()

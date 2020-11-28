@@ -160,10 +160,11 @@ class EnemyQuitGame(Dialog):
         self.button_quit.move(centerx=self.frame.centerx, bottom=self.frame.bottom - 10)
 
 class FourInARowGameplay(Window):
-    def __init__(self):
+    def __init__(self, master: Window):
         Window.__init__(self, bg_color=BACKGROUND_COLOR)
         self.bind_key(pygame.K_ESCAPE, lambda event: self.stop())
 
+        self.master = master
         self.logo = Image(RESOURCES.IMG["logo"])
         arrow = pygame.transform.flip(RESOURCES.IMG["arrow"], True, False)
         self.button_back = ImageButton(self, img=arrow, width=100, callback=self.stop, active_offset=(0, 5), highlight_color=YELLOW)
@@ -184,7 +185,7 @@ class FourInARowGameplay(Window):
         self.left_options = ButtonListVertical(offset=50)
         self.left_options.add(
             Button(self, "Restart", theme="option", callback=self.restart),
-            Button(self, "Quit game", theme="option", callback=self.close)
+            Button(self, "Quit game", theme="option", callback=self.quit_game)
         )
         self.text_winner = Text()
         self.text_drawn_match = Text("Drawn match.")
@@ -225,6 +226,10 @@ class FourInARowGameplay(Window):
 
     def on_quit(self) -> None:
         self.stop_connection()
+
+    def quit_game(self) -> None:
+        self.stop()
+        self.master.stop()
 
     def restart(self, init=False) -> None:
         if not init:

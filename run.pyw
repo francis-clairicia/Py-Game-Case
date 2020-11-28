@@ -6,14 +6,12 @@ import argparse
 import packaging.version
 import psutil
 from py_game_case import PyGameCase, __version__ as actual_version
+from py_game_case.constants import GAMES
 from navy import NavyWindow
 from four_in_a_row import FourInARowWindow
 from updater import Updater
 
-ALL_GAMES = {
-    "navy": NavyWindow,
-    "four_in_a_row": FourInARowWindow
-}
+ALL_GAMES = {game_id: game_infos["window"] for game_id, game_infos in GAMES.items()}
 
 def find_process_by_name(name: str) -> list[str]:
     process_list = list()
@@ -30,14 +28,13 @@ def main():
     args, unknown = parser.parse_known_args()
 
     if args.game in ALL_GAMES:
-        MainWindow = ALL_GAMES[args.game]
-        window = MainWindow()
+        window = ALL_GAMES[args.game]()
         return window.mainloop()
 
     if not sys.argv[0].endswith((".py", ".pyw")):
         process = psutil.Process()
         if len(find_process_by_name(process.name())) > 1:
-            return
+            return 0
 
     updater = Updater()
 
