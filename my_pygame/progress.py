@@ -14,14 +14,14 @@ class ProgressBar(RectangleShape):
     S_INSIDE = "inside"
 
     def __init__(self, width: int, height: int, color: pygame.Color, scale_color: pygame.Color, *, outline=2, from_=0, to=1, default=None, **kwargs):
-        RectangleShape.__init__(self, width, height, color=TRANSPARENT, outline=outline, **kwargs)
+        self.__scale_rect = RectangleShape(0, height, color=scale_color, outline=0, **kwargs)
+        self.__outline_rect = RectangleShape(width, height, color=TRANSPARENT, outline=outline, **kwargs)
+        RectangleShape.__init__(self, width, height, color, outline=0, **kwargs)
         if to <= from_:
             raise ValueError("end value 'to' must be greather than 'from'")
-        self.start = from_
-        self.end = to
+        self.from_value = from_
+        self.to_value = to
         self.percent = 0
-        self.__scale_rect = RectangleShape(0, height, color=scale_color, **kwargs)
-        self.__bg_rect = RectangleShape(width, height, color=color, **kwargs)
         if isinstance(default, (int, float)):
             self.value = float(default)
         self.__label_text = Text()
@@ -36,14 +36,12 @@ class ProgressBar(RectangleShape):
     def before_drawing(self, surface: pygame.Surface) -> None:
         RectangleShape.before_drawing(self, surface)
         self.__scale_rect.set_size(self.width * self.percent, self.height, smooth=False)
-        self.__bg_rect.set_size(self.size, smooth=False)
-        self.__bg_rect.move(x=self.x, centery=self.centery)
-        self.__scale_rect.move(x=self.x, centery=self.centery)
-        self.__bg_rect.draw(surface)
+        self.__outline_rect.set_size(self.size, smooth=False)
+        self.__outline_rect.midleft = self.__scale_rect.midleft = self.midleft
         self.__scale_rect.draw(surface)
 
     def after_drawing(self, surface: pygame.Surface) -> None:
-        RectangleShape.after_drawing(self, surface)
+        self.__outline_rect.draw(surface)
         offset = 10
         if self.__value_text.is_shown() and self.__value_text_type in ["value", "percent"]:
             movements = {
@@ -105,20 +103,12 @@ class ProgressBar(RectangleShape):
         self.__label_text_side = str()
 
     @property
-    def color(self) -> pygame.Color:
-        return TRANSPARENT
+    def outline_color(self) -> pygame.Color:
+        return self.__outline_rect.outline_color
 
-    @color.setter
-    def color(self, value: pygame.Color) -> None:
-        pass
-
-    @property
-    def bg_color(self) -> pygame.Color:
-        return self.__bg_rect.color
-
-    @bg_color.setter
-    def bg_color(self, value: pygame.Color) -> None:
-        self.__bg_rect.color = value
+    @outline_color.setter
+    def outline_color(self, value: pygame.Color) -> None:
+        self.__outline_rect.outline_color = value
 
     @property
     def scale_color(self) -> pygame.Color:
@@ -157,17 +147,17 @@ class ProgressBar(RectangleShape):
         self.__percent = (self.__value - self.__start) / (self.__end - self.__start)
 
     @property
-    def start(self) -> float:
+    def from_value(self) -> float:
         return self.__start
 
-    @start.setter
-    def start(self, value: float) -> None:
+    @from_value.setter
+    def from_value(self, value: float) -> None:
         self.__start = float(value)
 
     @property
-    def end(self) -> float:
+    def to_value(self) -> float:
         return self.__end
 
-    @end.setter
-    def end(self, value: float) -> None:
+    @to_value.setter
+    def to_value(self, value: float) -> None:
         self.__end = float(value)
