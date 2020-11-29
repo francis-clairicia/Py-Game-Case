@@ -211,9 +211,11 @@ class NavyWindow(MainWindow):
 
     def on_start_loop(self) -> None:
         self.disable_key_joy_focus_for_all_window()
+        Button.draw_focus_outline(False)
 
     def on_quit(self) -> None:
         self.enable_key_joy_focus_for_all_window()
+        Button.draw_focus_outline(True)
 
     def place_objects(self):
         self.bg.center = self.center

@@ -80,6 +80,8 @@ class GridCell(Focusable, Drawable):
     row = property(lambda self: self.__row)
     column = property(lambda self: self.__column)
 
+GridCell.draw_focus_outline(False)
+
 class GridRow:
     
     def __init__(self, master, row: int):

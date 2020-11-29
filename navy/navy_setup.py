@@ -20,13 +20,11 @@ class GameSetupTransition(WindowTransition):
         self.game_img = Drawable()
 
     def hide_actual_looping_window_start_loop(self, window: Window) -> None:
-        window.draw_screen()
-        self.menu_img.image = window.surface.copy()
+        self.menu_img.image = window.save_screen()
         self.menu_img.center = window.center
 
     def show_new_looping_window(self, window: Window) -> None:
-        window.draw_screen()
-        self.game_img.image = window.surface.copy()
+        self.game_img.image = window.save_screen()
         self.game_img.midleft = window.midright
         offset = 50
         while self.game_img.left > 0:
@@ -37,13 +35,11 @@ class GameSetupTransition(WindowTransition):
             pygame.time.wait(10)
 
     def hide_actual_looping_window_end_loop(self, window: Window) -> None:
-        window.draw_screen()
-        self.game_img.image = window.surface.copy()
+        self.game_img.image = window.save_screen()
         self.game_img.center = window.center
 
     def show_previous_window_end_loop(self, window: Window) -> None:
-        window.draw_screen()
-        self.menu_img.image = window.surface.copy()
+        self.menu_img.image = window.save_screen()
         self.menu_img.center = window.center
         offset = 50
         while self.game_img.left < window.right:
@@ -69,6 +65,8 @@ class BoxSetup(Button, use_parent_theme=False):
         self.disable_mouse()
         self.pos = pos
         self.ship = None
+
+BoxSetup.draw_focus_outline(False)
 
 class ShipSetup(Image):
 
@@ -240,15 +238,18 @@ class NavySetup(Window):
     def __init__(self):
         Window.__init__(self, bg_color=(0, 200, 255), bg_music=RESOURCES.MUSIC["setup"])
         self.gameplay = Gameplay()
+        self.enemy_quit_window = EnemyQuitGame(self)
         self.transition = GameSetupTransition()
         self.count_down = CountDown(self, 60, "Time left: {seconds}", font=(None, 70), color=WHITE)
         self.start_count_down = lambda: self.count_down.start(at_end=self.timeout) if self.client_socket.connected() else None
         self.button_back = ImageButton(self, RESOURCES.IMG["arrow_blue"], rotate=180, size=50, callback=self.stop)
         self.navy_grid = Grid(self, bg_color=(0, 157, 255))
-        self.navy_grid.place_multiple({
+        self.__boxes_dict = {
             (i, j): BoxSetup(self, size=BOX_SIZE, pos=(i, j))
             for i in range(NB_LINES_BOXES) for j in range(NB_COLUMNS_BOXES)
-        })
+        }
+        self.__boxes_list = list(self.__boxes_dict.values())
+        self.navy_grid.place_multiple(self.__boxes_dict)
         self.ships_list = DrawableListVertical(offset=70, justify="left")
         for ship_name, ship_infos in SHIPS.items():
             ship_line = DrawableListHorizontal(offset=ship_infos["offset"])
@@ -266,7 +267,7 @@ class NavySetup(Window):
 
     @property
     def boxes(self) -> Sequence[BoxSetup]:
-        return self.navy_grid.drawable
+        return self.__boxes_list
 
     def start(self, player_id: int) -> None:
         self.gameplay.player_id = player_id
@@ -293,7 +294,7 @@ class NavySetup(Window):
         self.button_play.state = Button.NORMAL if all(ship.on_map for ship in self.ships) else Button.DISABLED
         if self.client_socket.recv("quit"):
             self.count_down.stop()
-            EnemyQuitGame(self).mainloop()
+            self.enemy_quit_window.mainloop()
             self.stop()
 
     def create_setup(self) -> Sequence[dict[str, dict[str, Any]]]:
@@ -339,7 +340,7 @@ class NavySetup(Window):
             ship.clear()
 
     def get_box(self, line: int, column: float) -> BoxSetup:
-        return {box.pos: box for box in self.boxes}.get((line, column))
+        return self.__boxes_dict.get((line, column))
 
     def remove_boxes_highlight(self):
         for box in self.boxes:

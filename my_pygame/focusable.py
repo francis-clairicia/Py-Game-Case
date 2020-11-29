@@ -2,9 +2,10 @@
 
 from typing import Optional
 import pygame
+from .theme import ThemedObject
 from .colors import BLUE
 
-class Focusable:
+class Focusable(ThemedObject):
 
     MODE_MOUSE = "mouse"
     MODE_KEY = "keyboard"
@@ -14,6 +15,7 @@ class Focusable:
     ON_RIGHT = "on_right"
     ON_TOP = "on_top"
     ON_BOTTOM = "on_bottom"
+    __draw_focus_outline = dict()
 
     def __init__(self, master, highlight_color=BLUE, highlight_thickness=2):
         self.__focus = False
@@ -54,7 +56,7 @@ class Focusable:
                 self.__side[side] = None
 
     def focus_drawing(self, surface: pygame.Surface) -> None:
-        if not self.has_focus():
+        if not self.__draw_focus_outline.get(self.__class__, True) or not self.has_focus():
             return
         if hasattr(self, "rect"):
             if not self.__force_use_highlight_thickness:
@@ -71,6 +73,10 @@ class Focusable:
 
     def force_use_highlight_thickness(self, status: bool) -> None:
         self.__force_use_highlight_thickness = bool(status)
+
+    @classmethod
+    def draw_focus_outline(cls, status: bool) -> None:
+        Focusable.__draw_focus_outline[cls] = bool(status)
 
     def has_focus(self) -> bool:
         return self.__master.objects.focus_get() is self

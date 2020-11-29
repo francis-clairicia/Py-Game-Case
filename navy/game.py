@@ -21,7 +21,7 @@ def print_navy_map(navy_map: dict[tuple[int, int], int], higlight_box=None) -> N
         print(line)
     print("-" * NB_COLUMNS_BOXES)
 
-class Box(Button, use_parent_theme=False):
+class NavyGridBox(Button, use_parent_theme=False):
     def __init__(self, master, navy, size: tuple[int, int], pos: tuple[int, int]):
         params = {
             "size": size,
@@ -41,6 +41,8 @@ class Box(Button, use_parent_theme=False):
         self.state = Button.NORMAL
         self.hover = False
         self.focus_leave()
+
+NavyGridBox.draw_focus_outline(False)
 
 class Ship(Image):
 
@@ -74,17 +76,17 @@ class Ship(Image):
             self.__orient = orient
 
     @property
-    def boxes_covered(self) -> Sequence[Box]:
+    def boxes_covered(self) -> Sequence[NavyGridBox]:
         return self.__boxes_covered
 
     @boxes_covered.setter
-    def boxes_covered(self, boxes: Sequence[Box]) -> None:
+    def boxes_covered(self, boxes: Sequence[NavyGridBox]) -> None:
         self.__boxes_covered = boxes
 
     def destroyed(self) -> bool:
         return all(box.state == Button.DISABLED for box in self.boxes_covered)
 
-    def place_ship(self, boxes: Sequence[Box]):
+    def place_ship(self, boxes: Sequence[NavyGridBox]):
         left = min(boxes, key=lambda box: box.left).left
         top = min(boxes, key=lambda box: box.top).top
         right = max(boxes, key=lambda box: box.right).right
@@ -106,7 +108,7 @@ class Navy(Grid):
         Grid.__init__(self, master, bg_color=(0, 157, 255))
         self.master = master
         self.place_multiple({
-            (i, j): Box(master, navy=self, size=BOX_SIZE, pos=(i, j))
+            (i, j): NavyGridBox(master, navy=self, size=BOX_SIZE, pos=(i, j))
             for i in range(NB_LINES_BOXES) for j in range(NB_COLUMNS_BOXES)
         })
         self.ships_list = DrawableList()
@@ -142,7 +144,7 @@ class Navy(Grid):
         self.ships_list.add(ship)
         self.move()
 
-    def get_box(self, line: int, column: int) -> Box:
+    def get_box(self, line: int, column: int) -> NavyGridBox:
         return {box.pos: box for box in self.boxes}.get((line, column))
 
     def set_box_clickable(self, click: bool) -> None:
@@ -159,7 +161,7 @@ class Navy(Grid):
         return len(self.ships) == NB_SHIPS and all(ship.destroyed() for ship in self.ships)
 
     @property
-    def boxes(self) -> Sequence[Box]:
+    def boxes(self) -> Sequence[NavyGridBox]:
         return self.drawable
 
     @property
@@ -171,10 +173,10 @@ class Navy(Grid):
         for ship in self.ships:
             ship.place_ship(list(filter(lambda box: box.pos in ship.boxes_pos, self.boxes)))
 
-    def box_hit(self, box: Box) -> bool:
+    def box_hit(self, box: NavyGridBox) -> bool:
         return False
 
-    def set_box_hit(self, box: Box, hit: bool) -> None:
+    def set_box_hit(self, box: NavyGridBox, hit: bool) -> None:
         box.state = Button.DISABLED
         hit = bool(hit)
         img = {False: "hatch", True: "cross"}[hit]
@@ -208,7 +210,7 @@ class PlayerNavy(Navy):
         self.set_box_clickable(False)
         self.client_socket = player
 
-    def box_hit(self, box: Box) -> bool:
+    def box_hit(self, box: NavyGridBox) -> bool:
         attack_result = {
             "hit": False,
             "ship_destroyed": None
@@ -239,12 +241,12 @@ class OppositeNavy(Navy):
         self.client_socket = player
         self.ai_setup = list()
 
-    def box_hit(self, box: Box) -> bool:
+    def box_hit(self, box: NavyGridBox) -> bool:
         if not self.client_socket.connected():
             return self.ai_box_hit(box)
         return self.player_box_hit(box)
 
-    def ai_box_hit(self, box: Box) -> bool:
+    def ai_box_hit(self, box: NavyGridBox) -> bool:
         for ship_infos in self.ai_setup.copy():
             boxes_covered = list(filter(lambda box: box.pos in ship_infos["boxes"], self.boxes))
             if box in boxes_covered:
@@ -262,7 +264,7 @@ class OppositeNavy(Navy):
         RESOURCES.play_sfx("splash")
         return False
 
-    def player_box_hit(self, box: Box) -> bool:
+    def player_box_hit(self, box: NavyGridBox) -> bool:
         self.client_socket.send("attack", json.dumps(box.pos))
         attack_result = self.client_socket.get(self.client_socket.wait_for("attack_result"))
         if not isinstance(attack_result, dict):
@@ -369,21 +371,27 @@ class AI:
         return random.choice(potential_boxes)
 
 class FinishWindow(Window):
-    def __init__(self, master, victory: bool):
-        Window.__init__(self, master=master, bg_music=None if victory is None else RESOURCES.MUSIC["end"])
+    def __init__(self, master):
+        Window.__init__(self, master=master, bg_music=None)
         self.master = master
         self.bg = RectangleShape(self.width, self.height, (0, 0, 0, 170))
         self.frame = RectangleShape(0.5 * self.width, 0.5 * self.height, GREEN_DARK, outline=2)
-        self.victory = victory
-        if victory is not None:
-            message = "{winner} won".format(winner="You" if victory else "Enemy")
-        else:
-            message = "The enemy has left\nthe game"
-        self.text_finish = Text(message, font=(None, 70))
+        self.victory = None
+        self.text_finish = Text(font=(None, 70))
         self.button_restart = Button(self, "Restart", font=(None, 40), callback=self.restart)
         self.button_return_to_menu = Button(self, "Return to menu", font=(None, 40), callback=self.stop)
         self.ask_restart = False
         self.bind_key(pygame.K_ESCAPE, lambda event: self.stop())
+
+    def start(self, victory: bool) -> None:
+        self.victory = victory
+        self.bg_music = None if victory is None else RESOURCES.MUSIC["end"]
+        if victory is not None:
+            self.text_finish.message = "{winner} won".format(winner="You" if victory else "Enemy")
+        else:
+            self.text_finish.message = "The enemy has left\nthe game"
+        self.ask_restart = False
+        self.mainloop()
 
     def update(self):
         if self.ask_restart:
@@ -426,6 +434,7 @@ class Gameplay(Window):
         self.restart = False
         self.bind_key(pygame.K_ESCAPE, lambda event: self.stop())
         self.text_finish = Text("Finish !!!", font=(None, 120), color=WHITE)
+        self.window_finish = FinishWindow(self)
         self.game_finished = False
 
     def start(self, navy_setup: Sequence[dict[str, Any]], ai_setup=None) -> None:
@@ -441,21 +450,11 @@ class Gameplay(Window):
         self.opposite_grid.reset()
         self.objects.set_focus(None)
 
-    def update(self):
+    def update(self) -> None:
         self.text_finish.set_visibility(self.game_finished)
         if self.game_finished:
             return
-        if self.player_grid.destroyed():
-            self.opposite_grid.set_box_clickable(False)
-            self.highlight_ships(self.opposite_grid.show_all_non_destroyed_ships())
-            self.after(3000, self.finish, victory=False)
-            self.game_finished = True
-        elif self.opposite_grid.destroyed():
-            self.opposite_grid.set_box_clickable(False)
-            self.player_grid.send_non_destroyed_ships()
-            self.after(3000, self.finish, victory=True)
-            self.game_finished = True
-        elif self.client_socket.connected():
+        if self.client_socket.connected():
             if self.client_socket.recv("attack"):
                 self.hit_a_box(self.player_grid, json.loads(self.client_socket.get("attack")))
             elif self.client_socket.recv("quit"):
@@ -473,8 +472,8 @@ class Gameplay(Window):
             return False
         return bool(self.client_socket.get("turn"))
 
-    def finish(self, victory: bool):
-        FinishWindow(self, victory).mainloop()
+    def finish(self, victory: bool) -> None:
+        self.window_finish.start(victory)
         self.stop()
 
     def highlight_ships(self, ships: Sequence[Ship]):
@@ -483,7 +482,7 @@ class Gameplay(Window):
                 box.hover = not box.hover
         self.after(500, self.highlight_ships, ships)
 
-    def place_objects(self):
+    def place_objects(self) -> None:
         self.button_back.move(x=20, y=20)
         self.text_finish.move(y=20, centerx=self.centerx)
         self.player_grid.move(x=20, centery=self.centery)
@@ -491,17 +490,26 @@ class Gameplay(Window):
         self.turn_checker.resize_all_sprites(width=self.opposite_grid.left - self.player_grid.right - 150)
         self.turn_checker.move(center=self.center)
 
-    def hit_a_box(self, navy: Navy, box: Union[tuple[int, int], Box]):
+    def hit_a_box(self, navy: Navy, box: Union[tuple[int, int], NavyGridBox]) -> None:
         if isinstance(box, (list, tuple)):
             box = navy.get_box(*box)
         hitted = navy.box_hit(box)
         if navy.destroyed():
+            self.opposite_grid.set_box_clickable(False)
+            if navy is self.player_grid:
+                self.highlight_ships(self.opposite_grid.show_all_non_destroyed_ships())
+                victory = False
+            elif navy is self.opposite_grid:
+                self.player_grid.send_non_destroyed_ships()
+                victory = True
+            self.after(3000, self.finish, victory=victory)
+            self.game_finished = True
             return
         turn = hitted if navy == self.opposite_grid else not hitted
         self.opposite_grid.set_box_clickable(False)
         self.set_turn(turn)
 
-    def set_turn(self, turn: bool):
+    def set_turn(self, turn: bool) -> None:
         self.turn_checker.turn = turn
         if self.turn_checker.turn is True:
             self.opposite_grid.set_box_clickable(True)

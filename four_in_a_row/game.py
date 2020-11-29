@@ -9,7 +9,7 @@ from my_pygame import BLUE, WHITE, BLACK, GRAY_DARK, TRANSPARENT, YELLOW, RED, G
 from .constants import RESOURCES, BACKGROUND_COLOR, NB_ROWS, NB_COLUMNS, AI, LOCAL_PLAYER, LAN_PLAYER
 from .ai import FourInARowAI
 
-class Box(RectangleShape):
+class CircleBox(RectangleShape):
 
     def __init__(self, width: int, height: int, row: int, column: int):
         RectangleShape.__init__(self, width, height, TRANSPARENT)
@@ -50,15 +50,15 @@ class ColumnGrid(Clickable, DrawableListVertical):
     def __init__(self, master, width: int, height: int, column: int):
         row_height = height // NB_ROWS
         DrawableListVertical.__init__(self, offset=0)
-        self.add_multiple(Box(width, row_height, row, column) for row in range(NB_ROWS))
+        self.add_multiple(CircleBox(width, row_height, row, column) for row in range(NB_ROWS))
         Clickable.__init__(self, master, callback=lambda col=column: master.play(col), cursor=Cursor(pygame.SYSTEM_CURSOR_ARROW))
 
     @property
-    def available_boxes(self) -> Iterator[Box]:
+    def available_boxes(self) -> Iterator[CircleBox]:
         return filter(lambda box: box.value == 0, self.drawable)
 
     @property
-    def boxes(self) -> Sequence[Box]:
+    def boxes(self) -> Sequence[CircleBox]:
         return self.drawable
 
     def full(self) -> bool:

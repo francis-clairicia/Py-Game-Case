@@ -187,9 +187,13 @@ class PyGameCase(MainWindow):
 
     @threaded_function
     def __init_games(self) -> None:
-        for game_id, game_infos in filter(lambda item: item[0] not in self.window_game_dict, GAMES.items()):
-            with ThemeNamespace(game_id):
-                self.window_game_dict[game_id] = game_infos["window"]()
+        try:
+            for game_id, game_infos in filter(lambda item: item[0] not in self.window_game_dict, GAMES.items()):
+                with ThemeNamespace(game_id):
+                    self.window_game_dict[game_id] = game_infos["window"]()
+        except:
+            sys.excepthook(*sys.exc_info())
+            self.stop(force=True)
 
     def on_start_loop(self):
         self.image_game_preview.right = self.left
@@ -213,10 +217,12 @@ class PyGameCase(MainWindow):
         self.objects.set_priority(loading, 0, relative_to=self.logo)
         loading.animate_move(self, speed=10, centerx=loading.centerx, top=self.logo.bottom + 20)
         thread = self.__init_games()
-        while thread.is_alive() or loading.percent < 1:
+        while self.loop and (thread.is_alive() or loading.percent < 1):
             self.main_clock.tick(self.get_fps())
             loading.value = len(self.window_game_dict)
             self.draw_and_refresh(pump=True)
+        if not self.loop:
+            return
         pygame.time.wait(100)
         loading.animate_move(self, speed=10, center=self.logo.center)
         self.objects.remove(loading)

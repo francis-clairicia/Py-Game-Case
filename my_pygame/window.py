@@ -309,7 +309,9 @@ class Window(object):
     def loop(self) -> bool:
         return self.__loop
 
-    def mainloop(self, *, transition: Optional[WindowTransition] = None, place_objects=True, start_loop_call=True) -> int:
+    def mainloop(self, *, transition: Optional[WindowTransition] = None,
+                 action_before_loop: Optional[Callable[..., Any]] = None,
+                 action_after_loop: Optional[Callable[..., Any]] = None) -> int:
         self.__loop = True
         if not isinstance(Window.__main_window, Window):
             Window.__main_window = self
@@ -318,13 +320,13 @@ class Window(object):
         previous_window = Window.get_actual_window()
         if isinstance(transition, WindowTransition) and isinstance(previous_window, Window):
             transition.hide_actual_looping_window_start_loop(previous_window)
-        if place_objects:
-            self.place_objects()
+        if callable(action_before_loop):
+            action_before_loop()
+        self.place_objects()
         self.set_grid()
         self.__fps_update()
-        if start_loop_call:
-            self.on_start_loop()
-        if isinstance(transition, WindowTransition):
+        self.on_start_loop()
+        if isinstance(transition, WindowTransition) and self.__loop:
             transition.show_new_looping_window(self)
         while self.__loop:
             self.__main_clock.tick(Window.__fps)
@@ -341,9 +343,15 @@ class Window(object):
         self.__callback_after.clear()
         if self.main_window:
             Window.__main_window = None
-        if isinstance(transition, WindowTransition) and isinstance(previous_window, Window) and pygame.get_init():
-            transition.hide_actual_looping_window_end_loop(Window.get_actual_window())
-            transition.show_previous_window_end_loop(previous_window)
+        if pygame.get_init():
+            if isinstance(transition, WindowTransition):
+                transition.hide_actual_looping_window_end_loop(Window.get_actual_window())
+            if callable(action_after_loop):
+                action_after_loop()
+            if isinstance(transition, WindowTransition) and isinstance(previous_window, Window):
+                transition.show_previous_window_end_loop(previous_window)
+        elif callable(action_after_loop):
+            action_after_loop()
         return 0
 
     def stop(self, force=False, sound=None) -> None:
@@ -650,6 +658,16 @@ class Window(object):
         self.__screenshot = None
         self.__screenshot_window_callback = None
 
+    def save_screen(self) -> pygame.Surface:
+        save_surface = self.surface.copy()
+        save_screenshot_drawable = self.__screenshot
+        self.__screenshot = None
+        self.draw_screen(show_fps=False)
+        screen = self.surface.copy()
+        self.surface.blit(save_surface, save_surface.get_rect())
+        self.__screenshot = save_screenshot_drawable
+        return screen
+
     def __handle_bg_music(self) -> None:
         if (not Window.__enable_music or self.bg_music is None):
             self.stop_music()
@@ -813,6 +831,7 @@ class MainWindow(Window):
             "resources": resources,
             "config": config
         }
+        self.__save_config = None
         if not pygame.get_init():
             pygame.mixer.pre_init(Window.MIXER_FREQUENCY, Window.MIXER_SIZE, Window.MIXER_CHANNELS, Window.MIXER_BUFFER)
             status = pygame.init()
@@ -845,28 +864,24 @@ class MainWindow(Window):
         Window.bind_multiple_event_all_window((pygame.JOYDEVICEADDED, pygame.CONTROLLERDEVICEADDED), self.joystick.event_connect)
         Window.bind_multiple_event_all_window((pygame.JOYDEVICEREMOVED, pygame.CONTROLLERDEVICEREMOVED), self.joystick.event_disconnect)
 
-    def mainloop(self, transition: Optional[WindowTransition] = None, **kwargs) -> int:
-        previous_window = Window.get_actual_window()
-        if isinstance(transition, WindowTransition) and isinstance(previous_window, Window):
-            transition.hide_actual_looping_window_start_loop(previous_window)
-        save_config = self.__actual_config
+    def mainloop(self, transition: Optional[WindowTransition] = None) -> int:
+        return super().mainloop(
+            transition=transition,
+            action_before_loop=self.__action_before_loop,
+            action_after_loop=self.__action_after_loop
+        )
+
+    def __action_before_loop(self) -> None:
+        self.__save_config = self.__actual_config
         self.__load_window_config(**self.__window_config)
         MainWindow.__actual_config = self.__window_config
-        self.place_objects()
-        self.on_start_loop()
-        if isinstance(transition, WindowTransition):
-            transition.show_new_looping_window(self)
-        output = super().mainloop(place_objects=False, start_loop_call=False)
+
+    def __action_after_loop(self) -> None:
         if pygame.get_init():
-            if isinstance(transition, WindowTransition):
-                transition.hide_actual_looping_window_end_loop(Window.get_actual_window())
             Window.stop_music()
-            if save_config is not None:
-                self.__load_window_config(**save_config)
-            MainWindow.__actual_config = save_config
-            if isinstance(transition, WindowTransition) and isinstance(previous_window, Window):
-                transition.show_previous_window_end_loop(previous_window)
-        return output
+            if self.__save_config is not None:
+                self.__load_window_config(**self.__save_config)
+            MainWindow.__actual_config = self.__save_config
 
     def stop(self, force=False, sound=None) -> None:
         super().stop(force=force, sound=sound)
