@@ -131,14 +131,10 @@ class Drawable(Sprite, ThemedObject):
 
     def rotate(self, angle: float) -> None:
         angle %= 360
-        if angle == 0:
-            return
         self.image = pygame.transform.rotate(self.image, angle)
 
     def rotate_through_point(self, angle: float, point: Union[tuple[int, int], Vector2]) -> None:
         angle %= 360
-        if angle == 0:
-            return
         image, rect = self.surface_rotate(self.image, self.rect, angle, point)
         self.image = image
         self.center = rect.center
@@ -460,8 +456,7 @@ class Animation:
             master.draw_and_refresh(pump=True)
             if not only_move:
                 self.__drawable.image = default_image
-            if self.animation_set("move"):
-                self.__drawable.center = default_pos
+            self.__drawable.center = default_pos
         self.__animate(at_every_frame)
         master.draw_and_refresh()
         self.__clear()
