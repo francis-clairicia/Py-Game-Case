@@ -132,25 +132,25 @@ class Options(Dialog):
             "width": 0.45 * self.frame.w,
             "height": 30,
             "from_": 0,
-            "to": 100,
+            "to": 1,
         }
         self.scale_music = Scale(
             self, **params_for_all_scales,
-            callback=lambda value, percent: Window.set_music_volume(percent)
+            callback=Window.set_music_volume
         )
         self.scale_music.show_label("Music: ", Scale.S_LEFT, font=Button.get_theme_options("option")["font"])
-        self.scale_music.show_value(Scale.S_RIGHT, font=Button.get_theme_options("option")["font"])
+        self.scale_music.show_percent(Scale.S_RIGHT, font=Button.get_theme_options("option")["font"])
         self.scale_sound = Scale(
             self, **params_for_all_scales,
-            callback=lambda value, percent: Window.set_sound_volume(percent)
+            callback=Window.set_sound_volume
         )
         self.scale_sound.show_label("SFX: ", Scale.S_LEFT, font=Button.get_theme_options("option")["font"])
-        self.scale_sound.show_value(Scale.S_RIGHT, font=Button.get_theme_options("option")["font"])
+        self.scale_sound.show_percent(Scale.S_RIGHT, font=Button.get_theme_options("option")["font"])
         self.button_cancel = Button(self, "Return to menu", theme="option", callback=self.stop)
 
     def on_start_loop(self) -> None:
-        self.scale_music.percent = Window.music_volume()
-        self.scale_sound.percent = Window.sound_volume()
+        self.scale_music.value = Window.music_volume()
+        self.scale_sound.value = Window.sound_volume()
 
     def place_objects(self) -> None:
         self.text_title.move(centerx=self.frame.centerx, top=self.frame.top + 50)

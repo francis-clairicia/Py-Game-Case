@@ -1,6 +1,6 @@
 # -*- coding: Utf-8 -*
 
-from .window import Window, MainWindow
+from .window import Window, MainWindow, WindowTransition
 from .drawable import Drawable, Animation
 from .focusable import Focusable
 from .clickable import Clickable

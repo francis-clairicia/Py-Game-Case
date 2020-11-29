@@ -139,6 +139,20 @@ class WindowDrawableList(DrawableList):
 class WindowDrawable(Drawable):
     pass
 
+class WindowTransition:
+
+    def hide_actual_looping_window_start_loop(self, window) -> None:
+        pass
+
+    def show_new_looping_window(self, window) -> None:
+        pass
+
+    def hide_actual_looping_window_end_loop(self, window) -> None:
+        pass
+
+    def show_previous_window_end_loop(self, window) -> None:
+        pass
+
 class Window(object):
 
     MIXER_FREQUENCY = 44100
@@ -151,6 +165,7 @@ class Window(object):
     __default_key_repeat = (0, 0)
     __text_input_enabled = False
     __all_opened = list()
+    __actual_looping_window = None
     __sound_volume = 50
     __music_volume = 50
     __enable_music = True
@@ -210,6 +225,14 @@ class Window(object):
     @property
     def main_window(self) -> bool:
         return Window.__main_window is self
+
+    @staticmethod
+    def get_actual_window():
+        return Window.__actual_looping_window
+
+    @property
+    def main_clock(self) -> pygame.time.Clock:
+        return self.__main_clock
 
     @property
     def joystick(self) -> JoystickList:
@@ -286,20 +309,26 @@ class Window(object):
     def loop(self) -> bool:
         return self.__loop
 
-    def mainloop(self, *, place_objects=True, start_loop_call=True) -> int:
+    def mainloop(self, *, transition: Optional[WindowTransition] = None, place_objects=True, start_loop_call=True) -> int:
         self.__loop = True
         if not isinstance(Window.__main_window, Window):
             Window.__main_window = self
         Window.__all_opened.append(self)
         Window.__default_cursor.set()
+        previous_window = Window.get_actual_window()
+        if isinstance(transition, WindowTransition) and isinstance(previous_window, Window):
+            transition.hide_actual_looping_window_start_loop(previous_window)
         if place_objects:
             self.place_objects()
         self.set_grid()
         self.__fps_update()
         if start_loop_call:
             self.on_start_loop()
+        if isinstance(transition, WindowTransition):
+            transition.show_new_looping_window(self)
         while self.__loop:
             self.__main_clock.tick(Window.__fps)
+            Window.__actual_looping_window = self
             self.__handle_bg_music()
             self.__handle_cursor()
             self.__callback_after.process()
@@ -312,6 +341,9 @@ class Window(object):
         self.__callback_after.clear()
         if self.main_window:
             Window.__main_window = None
+        if isinstance(transition, WindowTransition) and isinstance(previous_window, Window) and pygame.get_init():
+            transition.hide_actual_looping_window_end_loop(Window.get_actual_window())
+            transition.show_previous_window_end_loop(previous_window)
         return 0
 
     def stop(self, force=False, sound=None) -> None:
@@ -362,14 +394,14 @@ class Window(object):
             self.__screenshot.draw(self.surface)
             pygame.draw.rect(self.surface, WHITE, self.__screenshot.rect, width=3)
 
-    def refresh(self, rect=None) -> None:
+    def refresh(self, rect=None, pump=False) -> None:
         pygame.display.update(rect or self.rect_to_update or self.rect)
+        if pump:
+            pygame.event.pump()
 
     def draw_and_refresh(self, show_fps=True, rect=None, pump=False) -> None:
         self.draw_screen(show_fps=show_fps)
-        self.refresh(rect=rect)
-        if pump:
-            pygame.event.pump()
+        self.refresh(rect=rect, pump=pump)
 
     @staticmethod
     def set_fps(framerate: int) -> None:
@@ -768,7 +800,6 @@ class MainWindow(Window):
     __config_file = str()
     __default_config_file = set_constant_file("window.ini", raise_error=False)
     __actual_config: Union[dict[str, Union[int, tuple[int, int], str, Resources]], None] = None
-    __last_image: Union[pygame.Surface, None] = None
 
     def __init__(self, title=str(), size=(0, 0), flags=0, bg_color=BLACK, bg_music: Optional[str] = None,
                  nb_joystick=0, resources: Optional[Resources] = None, config: Optional[str] = None):
@@ -814,26 +845,32 @@ class MainWindow(Window):
         Window.bind_multiple_event_all_window((pygame.JOYDEVICEADDED, pygame.CONTROLLERDEVICEADDED), self.joystick.event_connect)
         Window.bind_multiple_event_all_window((pygame.JOYDEVICEREMOVED, pygame.CONTROLLERDEVICEREMOVED), self.joystick.event_disconnect)
 
-    def mainloop(self, **kwargs) -> int:
+    def mainloop(self, transition: Optional[WindowTransition] = None, **kwargs) -> int:
+        previous_window = Window.get_actual_window()
+        if isinstance(transition, WindowTransition) and isinstance(previous_window, Window):
+            transition.hide_actual_looping_window_start_loop(previous_window)
         save_config = self.__actual_config
         self.__load_window_config(**self.__window_config)
         MainWindow.__actual_config = self.__window_config
-        output = super().mainloop(**kwargs)
+        self.place_objects()
+        self.on_start_loop()
+        if isinstance(transition, WindowTransition):
+            transition.show_new_looping_window(self)
+        output = super().mainloop(place_objects=False, start_loop_call=False)
         if pygame.get_init():
-            MainWindow.__last_image = self.surface.copy()
+            if isinstance(transition, WindowTransition):
+                transition.hide_actual_looping_window_end_loop(Window.get_actual_window())
             Window.stop_music()
             if save_config is not None:
                 self.__load_window_config(**save_config)
             MainWindow.__actual_config = save_config
+            if isinstance(transition, WindowTransition) and isinstance(previous_window, Window):
+                transition.show_previous_window_end_loop(previous_window)
         return output
 
     def stop(self, force=False, sound=None) -> None:
         super().stop(force=force, sound=sound)
         self.save_config()
-
-    @staticmethod
-    def get_last_screen_drawn() -> Union[pygame.Surface, None]:
-        return MainWindow.__last_image
 
     @staticmethod
     def load_config() -> None:

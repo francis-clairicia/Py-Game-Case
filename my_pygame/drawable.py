@@ -398,7 +398,6 @@ class Animation:
         self.__drawable = drawable
         self.__animations_order = ["scale_width", "scale_height", "rotate", "move"]
         self.__animations = dict.fromkeys(self.__animations_order)
-        self.__clock = pygame.time.Clock()
         self.__window_callback = None
         self.__save_window_callback = None
         self.__save_animations = None
@@ -442,52 +441,49 @@ class Animation:
         for key in self.__animations:
             self.__animations[key] = None
 
-    def __animate(self, at_every_frame: Optional[Callable[..., Any]], default_move: dict[str, Union[int, tuple[int, int]]]) -> None:
+    def __animate(self, at_every_frame: Optional[Callable[..., Any]]) -> None:
         for animation in self.__iter_animations():
             if animation.started():
                 animation()
             else:
                 animation.default()
-        if not self.animation_set("move"):
-            self.__drawable.move(**default_move)
         if callable(at_every_frame):
             at_every_frame()
 
     def start(self, master, at_every_frame=None) -> None:
         default_image = self.__drawable.image
         default_pos = self.__drawable.center
-        default_move = self.__drawable.get_former_moves()
         only_move = self.__only_move_animation()
         while any(animation.started() for animation in self.__iter_animations()):
-            self.__clock.tick(master.get_fps())
-            self.__animate(at_every_frame, default_move)
+            master.main_clock.tick(master.get_fps())
+            self.__animate(at_every_frame)
             master.draw_and_refresh(pump=True)
             if not only_move:
                 self.__drawable.image = default_image
-            self.__drawable.center = default_pos
-        self.__animate(at_every_frame, default_move)
+            if self.animation_set("move"):
+                self.__drawable.center = default_pos
+        self.__animate(at_every_frame)
         master.draw_and_refresh()
         self.__clear()
 
     def start_in_background(self, master, at_every_frame=None, after_animation=None) -> None:
         default_image = self.__drawable.image
         default_pos = self.__drawable.center
-        default_move = self.__drawable.get_former_moves()
         only_move = self.__only_move_animation()
-        self.__start_window_callback(master, at_every_frame, after_animation, default_image, default_pos, default_move, only_move)
+        self.__start_window_callback(master, at_every_frame, after_animation, default_image, default_pos, only_move)
 
     def __start_window_callback(self, master, at_every_frame: Optional[Callable[..., Any]], after_animation: Optional[Callable[..., Any]],
-                                default_image: pygame.Surface, default_pos: tuple[int, int],
-                                default_move: dict[str, Union[int, tuple[int, int]]], only_move: bool) -> None:
+                                default_image: pygame.Surface, default_pos: tuple[int, int], only_move: bool) -> None:
         if not only_move:
             self.__drawable.image = default_image
-        self.__drawable.center = default_pos
-        self.__animate(at_every_frame, default_move)
+        if self.animation_set("move"):
+            self.__drawable.center = default_pos
+        self.__animate(at_every_frame)
         if any(animation.started() for animation in self.__iter_animations()):
             self.__window_callback = master.after(
                 0, self.__start_window_callback,
                 master=master, at_every_frame=at_every_frame, after_animation=after_animation,
-                default_image=default_image, default_pos=default_pos, default_move=default_move, only_move=only_move
+                default_image=default_image, default_pos=default_pos, only_move=only_move
             )
         else:
             self.__clear()

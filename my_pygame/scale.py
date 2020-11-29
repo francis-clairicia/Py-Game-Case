@@ -45,4 +45,4 @@ class Scale(Clickable, ProgressBar):
 
     def call_update(self) -> None:
         if callable(self.__callback):
-            self.__callback(self.value, self.percent)
+            self.__callback(self.value)

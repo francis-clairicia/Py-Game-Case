@@ -5,13 +5,53 @@ import socket
 from math import sin, cos
 from typing import Sequence, Any
 import pygame
-from my_pygame import Window
-from my_pygame import Image, ImageButton, Button, RectangleShape, Text
+from my_pygame import Window, WindowTransition
+from my_pygame import Drawable, Image, ImageButton, Button, RectangleShape, Text
 from my_pygame import DrawableListHorizontal, DrawableListVertical, Grid
 from my_pygame import GREEN, GREEN_DARK, GREEN_LIGHT, WHITE, YELLOW, RED, TRANSPARENT
 from my_pygame import CountDown
 from .constants import RESOURCES, NB_LINES_BOXES, NB_COLUMNS_BOXES, BOX_SIZE, SHIPS
 from .game import Gameplay
+
+class GameSetupTransition(WindowTransition):
+
+    def __init__(self):
+        self.menu_img = Drawable()
+        self.game_img = Drawable()
+
+    def hide_actual_looping_window_start_loop(self, window: Window) -> None:
+        window.draw_screen()
+        self.menu_img.image = window.surface.copy()
+        self.menu_img.center = window.center
+
+    def show_new_looping_window(self, window: Window) -> None:
+        window.draw_screen()
+        self.game_img.image = window.surface.copy()
+        self.game_img.midleft = window.midright
+        offset = 50
+        while self.game_img.left > 0:
+            self.game_img.left = max(self.game_img.left - offset, 0)
+            self.menu_img.draw(window.surface)
+            self.game_img.draw(window.surface)
+            window.refresh(pump=True)
+            pygame.time.wait(10)
+
+    def hide_actual_looping_window_end_loop(self, window: Window) -> None:
+        window.draw_screen()
+        self.game_img.image = window.surface.copy()
+        self.game_img.center = window.center
+
+    def show_previous_window_end_loop(self, window: Window) -> None:
+        window.draw_screen()
+        self.menu_img.image = window.surface.copy()
+        self.menu_img.center = window.center
+        offset = 50
+        while self.game_img.left < window.right:
+            self.game_img.move_ip(offset, 0)
+            self.menu_img.draw(window.surface)
+            self.game_img.draw(window.surface)
+            window.refresh(pump=True)
+            pygame.time.wait(10)
 
 class BoxSetup(Button, use_parent_theme=False):
     def __init__(self, master, size: tuple[int, int], pos: tuple[int, int]):
@@ -200,6 +240,7 @@ class NavySetup(Window):
     def __init__(self):
         Window.__init__(self, bg_color=(0, 200, 255), bg_music=RESOURCES.MUSIC["setup"])
         self.gameplay = Gameplay()
+        self.transition = GameSetupTransition()
         self.count_down = CountDown(self, 60, "Time left: {seconds}", font=(None, 70), color=WHITE)
         self.start_count_down = lambda: self.count_down.start(at_end=self.timeout) if self.client_socket.connected() else None
         self.button_back = ImageButton(self, RESOURCES.IMG["arrow_blue"], rotate=180, size=50, callback=self.stop)
@@ -229,7 +270,7 @@ class NavySetup(Window):
 
     def start(self, player_id: int) -> None:
         self.gameplay.player_id = player_id
-        self.mainloop()
+        self.mainloop(transition=self.transition)
 
     def on_start_loop(self) -> None:
         self.start_count_down()

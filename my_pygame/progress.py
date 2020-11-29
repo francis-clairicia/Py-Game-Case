@@ -23,12 +23,13 @@ class ProgressBar(RectangleShape):
         self.__scale_rect = RectangleShape(0, height, color=scale_color, **kwargs)
         self.__bg_rect = RectangleShape(width, height, color=color, **kwargs)
         if isinstance(default, (int, float)):
-            self.value = default
+            self.value = float(default)
         self.__label_text = Text()
         self.__label_text_side = str()
         self.__value_text = Text()
         self.__value_text_side = str()
         self.__value_text_round_n = 0
+        self.__value_text_type = str()
         self.hide_label()
         self.hide_value()
 
@@ -44,7 +45,7 @@ class ProgressBar(RectangleShape):
     def after_drawing(self, surface: pygame.Surface) -> None:
         RectangleShape.after_drawing(self, surface)
         offset = 10
-        if self.__value_text.is_shown():
+        if self.__value_text.is_shown() and self.__value_text_type in ["value", "percent"]:
             movements = {
                 ProgressBar.S_TOP:    {"bottom": self.top - offset, "centerx": self.centerx},
                 ProgressBar.S_BOTTOM: {"top": self.bottom + offset, "centerx": self.centerx},
@@ -55,7 +56,11 @@ class ProgressBar(RectangleShape):
             side = self.__value_text_side
             round_n = self.__value_text_round_n
             if side in movements:
-                self.__value_text.message = round(self.value, round_n) if round_n > 0 else round(self.value)
+                if self.__value_text_type == "value":
+                    self.__value_text.message = round(self.value, round_n) if round_n > 0 else round(self.value)
+                elif self.__value_text_type == "percent":
+                    value = self.percent * 100
+                    self.__value_text.message = str(round(value, round_n) if round_n > 0 else round(value)) + "%"
                 self.__value_text.move(**movements[side])
                 self.__value_text.draw(surface)
         if self.__label_text.is_shown():
@@ -70,23 +75,32 @@ class ProgressBar(RectangleShape):
                 self.__label_text.move(**movements[side])
                 self.__label_text.draw(surface)
 
-    def show_value(self, side: str, round_n=0, **kwargs):
+    def show_value(self, side: str, round_n=0, **kwargs) -> None:
         self.__value_text.config(**kwargs)
         self.__value_text_side = side
         self.__value_text_round_n = int(round_n)
+        self.__value_text_type = "value"
         self.__value_text.show()
 
-    def hide_value(self):
+    def hide_value(self) -> None:
         self.__value_text.hide()
         self.__value_text_side = str()
         self.__value_text_round_n = 0
+        self.__value_text_type = str()
 
-    def show_label(self, label: str, side: str, **kwargs):
+    def show_percent(self, side: str, round_n=0, **kwargs) -> None:
+        self.show_value(side, round_n, **kwargs)
+        self.__value_text_type = "percent"
+
+    def hide_percent(self) -> None:
+        self.hide_value()
+
+    def show_label(self, label: str, side: str, **kwargs) -> None:
         self.__label_text.config(message=label, **kwargs)
         self.__label_text_side = side
         self.__label_text.show()
 
-    def hide_label(self):
+    def hide_label(self) -> None:
         self.__label_text.hide()
         self.__label_text_side = str()
 

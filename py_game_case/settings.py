@@ -15,9 +15,11 @@ class SettingsWindow(Dialog):
         self.bind_key(pygame.K_ESCAPE, lambda event: self.animate_quit())
 
         self.text_title = Text("Settings", font=("calibri", 100), color=WHITE)
+        self.text_quit = Text("Escape: Exit settings", font=("calibri", 20), color=WHITE)
 
     def place_objects(self) -> None:
         self.text_title.move(centerx=self.frame.centerx, top=self.frame.top + 20)
+        self.text_quit.move(left=self.frame.left + 10, top=self.frame.top + 10)
 
     def on_start_loop(self) -> None:
         self.frame.left = self.right

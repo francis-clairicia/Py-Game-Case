@@ -53,7 +53,7 @@ additional_files = ["resources"]
 
 executable_infos = {
     "project_name": "Py-Game-Case",
-    "description": "A library of board games using pygame",
+    "description": "Py-Game-Case - A library of board games using pygame",
     "author": "Francis Clairicia-Rose-Claire-Josephine",
     "version": get_application_version(application),
     "executables": [
