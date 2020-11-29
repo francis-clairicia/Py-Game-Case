@@ -49,7 +49,7 @@ class GameSetupTransition(WindowTransition):
             window.refresh(pump=True)
             pygame.time.wait(10)
 
-class BoxSetup(Button, use_parent_theme=False):
+class BoxSetup(Button, use_parent_theme=False, draw_focus_outline=False):
     def __init__(self, master, size: tuple[int, int], pos: tuple[int, int]):
         params = {
             "size": size,
@@ -65,8 +65,6 @@ class BoxSetup(Button, use_parent_theme=False):
         self.disable_mouse()
         self.pos = pos
         self.ship = None
-
-BoxSetup.draw_focus_outline(False)
 
 class ShipSetup(Image):
 

@@ -21,7 +21,7 @@ def print_navy_map(navy_map: dict[tuple[int, int], int], higlight_box=None) -> N
         print(line)
     print("-" * NB_COLUMNS_BOXES)
 
-class NavyGridBox(Button, use_parent_theme=False):
+class NavyGridBox(Button, use_parent_theme=False, draw_focus_outline=False):
     def __init__(self, master, navy, size: tuple[int, int], pos: tuple[int, int]):
         params = {
             "size": size,
@@ -41,8 +41,6 @@ class NavyGridBox(Button, use_parent_theme=False):
         self.state = Button.NORMAL
         self.hover = False
         self.focus_leave()
-
-NavyGridBox.draw_focus_outline(False)
 
 class Ship(Image):
 

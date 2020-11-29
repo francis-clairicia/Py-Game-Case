@@ -17,6 +17,10 @@ class Focusable(ThemedObject):
     ON_BOTTOM = "on_bottom"
     __draw_focus_outline = dict()
 
+    def __init_subclass__(cls, draw_focus_outline=True, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+        Focusable.__draw_focus_outline[cls] = bool(draw_focus_outline)
+
     def __init__(self, master, highlight_color=BLUE, highlight_thickness=2):
         self.__focus = False
         self.__side = dict.fromkeys((Focusable.ON_LEFT, Focusable.ON_RIGHT, Focusable.ON_TOP, Focusable.ON_BOTTOM))

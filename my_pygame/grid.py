@@ -7,7 +7,7 @@ from .focusable import Focusable
 from .colors import TRANSPARENT
 from .surface import create_surface
 
-class GridCell(Focusable, Drawable):
+class GridCell(Focusable, Drawable, draw_focus_outline=False):
 
     def __init__(self, master, row: int, column: int):
         Drawable.__init__(self)
@@ -79,8 +79,6 @@ class GridCell(Focusable, Drawable):
     
     row = property(lambda self: self.__row)
     column = property(lambda self: self.__column)
-
-GridCell.draw_focus_outline(False)
 
 class GridRow:
     
