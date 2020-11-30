@@ -446,10 +446,14 @@ class Window(object):
     def show_all(self, without=list()) -> None:
         for obj in filter(lambda obj: obj not in without, self.objects):
             obj.show()
+        for obj in without:
+            obj.hide()
 
     def hide_all(self, without=list()) -> None:
         for obj in filter(lambda obj: obj not in without, self.objects):
             obj.hide()
+        for obj in without:
+            obj.show()
 
     def event_handler(self) -> None:
         for key_state_dict in [Window.__all_window_key_state_dict, self.__key_state_dict]:
@@ -832,6 +836,8 @@ class MainWindow(Window):
             "config": config
         }
         self.__save_config = None
+        self.__before_loop_callback = None
+        self.__after_loop_callback = None
         if not pygame.get_init():
             pygame.mixer.pre_init(Window.MIXER_FREQUENCY, Window.MIXER_SIZE, Window.MIXER_CHANNELS, Window.MIXER_BUFFER)
             status = pygame.init()
@@ -864,7 +870,11 @@ class MainWindow(Window):
         Window.bind_multiple_event_all_window((pygame.JOYDEVICEADDED, pygame.CONTROLLERDEVICEADDED), self.joystick.event_connect)
         Window.bind_multiple_event_all_window((pygame.JOYDEVICEREMOVED, pygame.CONTROLLERDEVICEREMOVED), self.joystick.event_disconnect)
 
-    def mainloop(self, transition: Optional[WindowTransition] = None) -> int:
+    def mainloop(self, transition: Optional[WindowTransition] = None,
+                 action_before_loop: Optional[Callable[..., Any]] = None,
+                 action_after_loop: Optional[Callable[..., Any]] = None) -> int:
+        self.__before_loop_callback = action_before_loop
+        self.__after_loop_callback = action_after_loop
         return super().mainloop(
             transition=transition,
             action_before_loop=self.__action_before_loop,
@@ -875,6 +885,8 @@ class MainWindow(Window):
         self.__save_config = self.__actual_config
         self.__load_window_config(**self.__window_config)
         MainWindow.__actual_config = self.__window_config
+        if callable(self.__before_loop_callback):
+            self.__before_loop_callback()
 
     def __action_after_loop(self) -> None:
         if pygame.get_init():
@@ -882,6 +894,8 @@ class MainWindow(Window):
             if self.__save_config is not None:
                 self.__load_window_config(**self.__save_config)
             MainWindow.__actual_config = self.__save_config
+        if callable(self.__after_loop_callback):
+            self.__after_loop_callback()
 
     def stop(self, force=False, sound=None) -> None:
         super().stop(force=force, sound=sound)

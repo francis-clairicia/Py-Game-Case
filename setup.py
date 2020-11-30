@@ -2,6 +2,7 @@
 
 import os
 import sys
+import platform
 import argparse
 import glob
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -9,7 +10,10 @@ from cx_Freeze import setup, Executable
 
 def zip_compress():
     global executable_infos, options
-    zip_filename = "{}-{}.zip".format(executable_infos["project_name"], sys.platform).replace(" ", "_")
+    zip_filename = "{}-{}.zip".format(
+        executable_infos["project_name"],
+        platform.system(),
+    ).replace(" ", "_")
     print(f"Compressing executable in {zip_filename}...")
     output_folder = options.get("build_exe", ".")
     output_zip = os.path.join(output_folder, zip_filename)
@@ -40,6 +44,7 @@ def get_application_version(app: str) -> str:
 
 parser = argparse.ArgumentParser(prog="setup.py", description="Setup for executable freezing")
 parser.add_argument("--zip", help="Create a zip file when it's finished", action="store_true")
+parser.add_argument("--version", help="Use a custom version instead of applcation version")
 args = parser.parse_args()
 
 #############################################################################
@@ -47,7 +52,7 @@ args = parser.parse_args()
 
 application = "py_game_case"
 
-dependencies = ["pygame", "my_pygame", "tkinter", "psutil", "updater", "navy", "four_in_a_row"]
+dependencies = ["pygame", "my_pygame", "psutil", "navy", "four_in_a_row"]
 
 additional_files = ["resources"]
 
@@ -55,7 +60,7 @@ executable_infos = {
     "project_name": "Py-Game-Case",
     "description": "Py-Game-Case - A library of board games using pygame",
     "author": "Francis Clairicia-Rose-Claire-Josephine",
-    "version": get_application_version(application),
+    "version": args.version or get_application_version(application),
     "executables": [
         {
             "script": "run.pyw",
@@ -106,7 +111,7 @@ if "tkinter" not in options["includes"]:
     options["excludes"].append("tkinter")
 
 # pour inclure sous Windows les dll system de Windows necessaires
-if sys.platform == "win32":
+if sys.platform.startswith("win"):
     options["include_msvcr"] = True
 
 #############################################################################
@@ -116,8 +121,8 @@ executables = list()
 for infos in executable_infos["executables"]:
     target = Executable(
         script=os.path.join(sys.path[0], infos["script"]),
-        base=infos["base"] if sys.platform == "win32" else None,
-        targetName=infos["name"] + (".exe" if sys.platform == "win32" else ""),
+        base=infos["base"] if sys.platform.startswith("win") else None,
+        targetName=infos["name"] + (".exe" if sys.platform.startswith("win") else ""),
         icon=infos["icon"],
         copyright=executable_infos["copyright"]
     )
@@ -148,5 +153,5 @@ finally:
     print("-----------------------------------------------------------------------------------")
     print(result)
     print("-----------------------------------------------------------------------------------")
-    if sys.platform == "win32":
+    if sys.platform.startswith("win"):
         os.system("pause")

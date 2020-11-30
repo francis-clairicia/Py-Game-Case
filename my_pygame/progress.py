@@ -19,6 +19,8 @@ class ProgressBar(RectangleShape):
         RectangleShape.__init__(self, width, height, color, outline=0, **kwargs)
         if to <= from_:
             raise ValueError("end value 'to' must be greather than 'from'")
+        self.__value = self.__percent = 0
+        self.__start = self.__end = 0
         self.from_value = from_
         self.to_value = to
         self.percent = 0
@@ -93,6 +95,10 @@ class ProgressBar(RectangleShape):
     def hide_percent(self) -> None:
         self.hide_value()
 
+    def config_value_text(self, **kwargs) -> None:
+        kwargs.pop("message", None)
+        self.__value_text.config(**kwargs)
+
     def show_label(self, label: str, side: str, **kwargs) -> None:
         self.__label_text.config(message=label, **kwargs)
         self.__label_text_side = side
@@ -101,6 +107,11 @@ class ProgressBar(RectangleShape):
     def hide_label(self) -> None:
         self.__label_text.hide()
         self.__label_text_side = str()
+
+    def config_label_text(self, message=None, **kwargs) -> None:
+        if message is not None:
+            kwargs["message"] = message
+        self.__label_text.config(**kwargs)
 
     @property
     def outline_color(self) -> pygame.Color:
@@ -144,7 +155,7 @@ class ProgressBar(RectangleShape):
         elif value < self.__start:
             value = self.__start
         self.__value = value
-        self.__percent = (self.__value - self.__start) / (self.__end - self.__start)
+        self.__percent = (self.__value - self.__start) / (self.__end - self.__start) if self.__end > self.__start else 0
 
     @property
     def from_value(self) -> float:
@@ -153,6 +164,7 @@ class ProgressBar(RectangleShape):
     @from_value.setter
     def from_value(self, value: float) -> None:
         self.__start = float(value)
+        self.percent = self.percent
 
     @property
     def to_value(self) -> float:
@@ -161,3 +173,4 @@ class ProgressBar(RectangleShape):
     @to_value.setter
     def to_value(self, value: float) -> None:
         self.__end = float(value)
+        self.percent = self.percent

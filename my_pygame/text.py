@@ -3,6 +3,7 @@
 import os.path
 import textwrap
 import pygame
+from typing import Union
 from pygame.font import Font, SysFont
 from .surface import create_surface
 from .drawable import Drawable
@@ -108,7 +109,7 @@ class Text(Drawable, use_parent_theme=False):
             self.__shadow_surface.color = color
 
     @staticmethod
-    def create_font_object(font) -> Font:
+    def create_font_object(font: Union[Font, tuple[str, int, ...], None]) -> Font:
         obj = None
         if isinstance(font, (tuple, list)):
             if font[0] is not None and os.path.isfile(font[0]):

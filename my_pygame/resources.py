@@ -2,8 +2,10 @@
 
 import os
 import pygame
-from typing import Union, Any, Iterator, Callable
+from typing import Union, Any, Iterator, Callable, TypeVar
 from .thread import threaded_function
+
+_ResourceType = TypeVar('_ResourceType')
 
 def find_in_iterable(iterable, valid_callback=None) -> Iterator[tuple[Union[int, str], ...]]:
 
@@ -40,38 +42,45 @@ def find_key_in_container(key: str, container: dict[str, Any]) -> tuple[Union[in
             return key_path[:key_path.index(key) + 1]
     return None
 
-class ResourcesLoader:
+class ResourcesLoader(dict):
     
     def __init__(self, resources_loader: Callable[[str], Any]):
+        super().__init__()
         self.__files = dict()
         self.__not_loaded = dict()
-        self.__loaded = dict()
         self.__resources_loader = resources_loader
 
     def load(self) -> None:
-        if not self.__loaded:
-            self.__not_loaded |= self.__files.copy()
+        if not self:
+            self.__not_loaded |= self.__files
         for key_path in find_in_iterable(self.__not_loaded, valid_callback=os.path.isfile):
             key, container = travel_container(key_path, self.__not_loaded)
             if callable(self.__resources_loader):
                 container[key] = self.__resources_loader(container[key])
-        self.__loaded |= self.__not_loaded
+        super().update(self.__not_loaded)
         self.__not_loaded.clear()
+
+    def __setitem__(self, key: str, value: Union[list[Any], dict[str, Any]]) -> None:
+        self.update({key: value})
+
+    def __contains__(self, key: str) -> bool:
+        return (find_key_in_container(key, self) is not None)
 
     def update(self, resource_dict: dict[str, Any]) -> None:
         self.__files |= resource_dict
         if callable(self.__resources_loader):
-            self.__not_loaded |= resource_dict.copy()
+            self.__not_loaded |= resource_dict
         else:
-            self.__loaded |= resource_dict.copy()
+            super().update(resource_dict)
 
-    def __contains__(self, key: Any) -> bool:
-        return key in self.__loaded
+    def find(self, key: str) -> Union[_ResourceType, None]:
+        key_path = find_key_in_container(key, self)
+        if key_path is None:
+            return None
+        return get_value_in_container(key_path, self)
 
-    def __getitem__(self, key: Any) -> Any:
-        return self.loaded[key]
-
-    loaded = property(lambda self: self.__loaded.copy())
+    def __or__(self, resource_dict: dict[str, Any]):
+        return self.__not_loaded | resource_dict
 
 class ImageLoader(ResourcesLoader):
     def __init__(self):
@@ -112,18 +121,18 @@ class Resources:
             volume = 0
         elif volume > 1:
             volume = 1
-        for key_path in find_in_iterable(self.__sfx.loaded, valid_callback=lambda obj: isinstance(obj, pygame.mixer.Sound)):
+        for key_path in find_in_iterable(self.__sfx, valid_callback=lambda obj: isinstance(obj, pygame.mixer.Sound)):
             sound_obj = self.get_sfx(*key_path)
             sound_obj.set_volume(volume if bool(state) is True else 0)
 
-    def play_sfx(self, *key_path) -> (pygame.mixer.Channel, None):
+    def play_sfx(self, *key_path) -> Union[pygame.mixer.Channel, None]:
         sound = self.get_sfx(*key_path)
         if sound is None:
             return None
         return sound.play()
 
     def font(self, key: str, *params) -> tuple[str, ...]:
-        key_path = find_key_in_container(key, self.__font.loaded)
+        key_path = find_key_in_container(key, self.__font)
         if key_path is None:
             font = None
         else:
@@ -131,18 +140,18 @@ class Resources:
         return (font, *params)
 
     def get_img(self, *key_path) -> pygame.Surface:
-        return get_value_in_container(key_path, self.__img.loaded)
+        return get_value_in_container(key_path, self.__img)
 
     def get_font(self, *key_path) -> str:
-        return get_value_in_container(key_path, self.__font.loaded)
+        return get_value_in_container(key_path, self.__font)
 
     def get_music(self, *key_path) -> str:
-        return get_value_in_container(key_path, self.__music.loaded)
+        return get_value_in_container(key_path, self.__music)
 
     def get_sfx(self, *key_path) -> pygame.mixer.Sound:
-        return get_value_in_container(key_path, self.__sfx.loaded)
+        return get_value_in_container(key_path, self.__sfx)
 
-    IMG = property(lambda self: self.__img.loaded, lambda self, value: self.__img.update(value))
-    FONT = property(lambda self: self.__font.loaded, lambda self, value: self.__font.update(value))
-    MUSIC = property(lambda self: self.__music.loaded, lambda self, value: self.__music.update(value))
-    SFX = property(lambda self: self.__sfx.loaded, lambda self, value: self.__sfx.update(value))
+    IMG = property(lambda self: self.__img, lambda self, value: self.__img.update(value))
+    FONT = property(lambda self: self.__font, lambda self, value: self.__font.update(value))
+    MUSIC = property(lambda self: self.__music, lambda self, value: self.__music.update(value))
+    SFX = property(lambda self: self.__sfx, lambda self, value: self.__sfx.update(value))

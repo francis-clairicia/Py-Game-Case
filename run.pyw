@@ -5,13 +5,10 @@ import sys
 import argparse
 import packaging.version
 import psutil
-from py_game_case import PyGameCase, __version__ as actual_version
+from py_game_case import PyGameCase
 from py_game_case.constants import GAMES
 from navy import NavyWindow
 from four_in_a_row import FourInARowWindow
-from updater import Updater
-
-ALL_GAMES = {game_id: game_infos["window"] for game_id, game_infos in GAMES.items()}
 
 def find_process_by_name(name: str) -> list[str]:
     process_list = list()
@@ -23,26 +20,16 @@ def find_process_by_name(name: str) -> list[str]:
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("game", nargs="?")
-    parser.add_argument("--update", action="store_true")
-    parser.add_argument("--install", metavar="version")
     args, unknown = parser.parse_known_args()
 
-    if args.game in ALL_GAMES:
-        window = ALL_GAMES[args.game]()
-        return window.mainloop()
-
-    if not sys.argv[0].endswith((".py", ".pyw")):
-        process = psutil.Process()
-        if len(find_process_by_name(process.name())) > 1:
-            return 0
-
-    updater = Updater()
-
-    if args.update:
-        updater.install_latest_version(actual_version)
-    elif args.install:
-        updater.install_version(args.install)
-    window = PyGameCase()
+    if args.game in GAMES:
+        window = GAMES[args.game]["window"]()
+    else:
+        if not sys.argv[0].endswith((".py", ".pyw")):
+            process = psutil.Process()
+            if len(find_process_by_name(process.name())) > 1:
+                return 0
+        window = PyGameCase()
     return window.mainloop()
 
 if __name__ == "__main__":

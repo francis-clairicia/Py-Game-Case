@@ -12,7 +12,8 @@ from my_pygame import TRANSPARENT, WHITE, BLACK, YELLOW, GREEN
 from my_pygame import set_color_alpha, change_brightness
 from my_pygame import ThemeNamespace, threaded_function
 from .constants import RESOURCES, GAMES, SETTINGS
-from .settings import SettingsWindow
+from .settings import SettingsWindow, UpdaterWindow
+from .updater import Updater
 from .version import __version__
 
 class GameProcess(psutil.Popen):
@@ -140,7 +141,7 @@ class PyGameCase(MainWindow):
             "highlight_thickness": 0
         })
 
-        self.launch_in_same_window = True
+        self.launcher_updater = Updater(__version__)
 
         self.image_game_preview = Sprite()
         self.bg = DrawableListHorizontal()
@@ -168,6 +169,7 @@ class PyGameCase(MainWindow):
         self.game_launched_processes = GameProcessList()
 
         self.settings_section = SettingsWindow(self)
+        self.updater_window = UpdaterWindow(self, self.launcher_updater)
 
         self.button_settings = SettingsButton(self, size=40, callback=self.settings_section.mainloop)
         self.button_settings.force_use_highlight_thickness(True)
@@ -205,11 +207,16 @@ class PyGameCase(MainWindow):
         default_logo_width = self.logo.width
         self.logo.load(RESOURCES.IMG["logo"])
         self.logo.midtop = self.midbottom
+        if SETTINGS.auto_check_update: # and self.launcher_updater.has_a_new_release():
+            self.logo.animate_move(self, speed=20, top=0, centerx=self.centerx)
+            self.updater_window.mainloop()
+            if not self.loop:
+                return
         self.logo.animate_move(self, speed=20, midbottom=self.center)
         loading = ProgressBar(
             default_logo_width, 40, TRANSPARENT, GREEN,
             from_=0, to=len(GAMES), default=len(self.window_game_dict),
-            outline_color=WHITE, border_radius=30
+            outline_color=WHITE, border_radius=10
         )
         loading.center = self.logo.center
         loading.show_percent(ProgressBar.S_INSIDE, font=("calibri", 30), color=WHITE)
@@ -230,6 +237,9 @@ class PyGameCase(MainWindow):
         for obj, center in save_objects_center:
             obj.animate_move(self, speed=20, center=center)
         self.focus_mode(Button.MODE_KEY)
+
+    def on_quit(self) -> None:
+        self.launcher_updater.close()
 
     def update(self) -> None:
         if self.game_launched_processes:
@@ -253,13 +263,15 @@ class PyGameCase(MainWindow):
         self.image_game_preview.animate_move_in_background(self, speed=75, right=self.right)
 
     def launch_game(self, game_id: str) -> None:
-        if not self.launch_in_same_window:
+        if not SETTINGS.launch_in_same_window:
             self.game_launched_processes.launch(game_id)
             self.buttons_game_dict[game_id].text += PyGameCase.RUNNING_STATE_SUFFIX
             self.buttons_game_dict[game_id].state = Button.DISABLED
             self.iconify()
         else:
             self.game_id = game_id
+            if self.image_game_preview.get_actual_sprite_list_name() != game_id:
+                self.image_game_preview.animate_move(self, speed=75, right=self.left)
             self.image_game_preview.set_sprite(game_id)
             self.image_game_preview.animate_move(self, speed=75, right=self.right)
             window = self.window_game_dict[game_id]

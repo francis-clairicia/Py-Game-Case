@@ -16,14 +16,21 @@ class Section(Dialog):
         self.master = master
         self.gameplay = gameplay
         arrow = pygame.transform.flip(RESOURCES.IMG["arrow"], True, False)
-        self.button_back = ImageButton(self, img=arrow, width=50, callback=self.stop, active_offset=(0, 5), highlight_color=YELLOW)
+        self.button_back = ImageButton(self, img=arrow, width=50, callback=self.animate_stop, active_offset=(0, 5), highlight_color=YELLOW)
         self.title = Text(title)
 
     def place_objects(self) -> None:
-        self.frame.size = self.frame.width, self.master.buttons.height
-        self.frame.move(left=10, top=self.master.buttons.top)
         self.button_back.move(left=self.frame.left + 5, top=self.frame.top + 5)
         self.title.move(centerx=self.frame.centerx, top=self.frame.top + 10)
+
+    def on_start_loop(self) -> None:
+        self.frame.size = self.frame.width, self.master.buttons.height
+        self.frame.move(right=0, top=self.master.buttons.top)
+        self.frame.animate_move(self, speed=50, at_every_frame=self.place_objects, left=10, top=self.frame.top)
+
+    def animate_stop(self) -> None:
+        self.frame.animate_move(self, speed=50, at_every_frame=self.place_objects, right=0, top=self.frame.top)
+        self.stop()
 
 class AILevelSelectorSection(Section):
 
@@ -44,6 +51,7 @@ class AILevelSelectorSection(Section):
         )
 
     def on_start_loop(self) -> None:
+        super().on_start_loop()
         self.buttons_ai_level[0].focus_set()
 
     def place_objects(self) -> None:
@@ -68,6 +76,7 @@ class LocalPlayingSection(Section):
         self.button_play = Button(self, "Play", theme=["option", "section"], callback=self.play)
 
     def on_start_loop(self) -> None:
+        super().on_start_loop()
         self.button_play.focus_set()
 
     def place_objects(self) -> None:
@@ -118,6 +127,7 @@ class LANPlayingP1(Section):
                 self.stop()
 
     def on_start_loop(self) -> None:
+        super().on_start_loop()
         self.form.get_entry("P1").focus_set()
         self.form.get_entry("P1").start_edit()
         self.stop_server()
@@ -175,6 +185,7 @@ class LANPlayingP2(Section):
         self.button_connect.state = Button.NORMAL if self.form.get("name") else Button.DISABLED
 
     def on_start_loop(self) -> None:
+        super().on_start_loop()
         self.form.get_entry("name").focus_set()
         self.form.get_entry("name").start_edit()
         self.text_game_status.hide()

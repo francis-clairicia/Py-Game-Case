@@ -23,7 +23,7 @@ class MetaThemedObject(type):
         if cls not in _CLASSES_NOT_USING_PARENT_DEFAULT_THEMES:
             for parent in get_all_parent_class(cls, do_not_search_for=_CLASSES_NOT_USING_PARENT_DEFAULT_THEMES):
                 default_theme += _DEFAULT_THEME.get(parent, list()) + _HIDDEN_DEFAULT_THEME.get(parent, list())
-        default_theme += _DEFAULT_THEME.get(cls, list()) + _HIDDEN_DEFAULT_THEME.get(cls, list())
+        default_theme += _HIDDEN_DEFAULT_THEME.get(cls, list()) + _DEFAULT_THEME.get(cls, list())
         theme = kwargs.pop("theme", None)
         if theme is None:
             theme = list()
