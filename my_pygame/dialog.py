@@ -7,8 +7,8 @@ from .colors import WHITE, BLACK
 
 class DialogFrame(RectangleShape):
 
-    def before_drawing(self, surface: pygame.Surface) -> None:
-        self.show()
+    def set_visibility(self, status: bool) -> None:
+        super().set_visibility(True)
 
 class Dialog(Window):
     def __init__(self, master: Window, width_ratio=0.5, height_ratio=0.5,

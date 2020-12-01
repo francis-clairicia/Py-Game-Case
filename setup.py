@@ -18,7 +18,8 @@ def zip_compress():
     output_folder = options.get("build_exe", ".")
     output_zip = os.path.join(output_folder, zip_filename)
     all_files = list()
-    pattern_list = ["*.exe", "lib", "python*.dll", "vcruntime*.dll", *options["include_files"]]
+    all_executables = [exec_file["name"] + ".exe" for exec_file in executable_infos["executables"]]
+    pattern_list = [*all_executables, "lib", "python*.dll", "vcruntime*.dll", *options["include_files"]]
     for pattern in pattern_list:
         pattern = os.path.join(output_folder, pattern)
         for path in glob.glob(pattern):

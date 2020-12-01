@@ -107,26 +107,25 @@ class GitRepository:
     def get_release(self, version: Union[str, packaging.version.Version]) -> GitRelease:
         return GitRelease(self.__get_link(f"releases/tags/{version}"), self.__session)
 
-    def download(self, asset: GitReleaseAsset, directory: str, progress: ProgressBar) -> str:
+    def download(self, asset: GitReleaseAsset, file_dest: str, progress: ProgressBar) -> str:
         progress.from_value = 0
         progress.to_value = asset.size
         progress.percent = 0
         progress.show_label("Downloading {}".format(asset.name), ProgressBar.S_TOP)
         progress.show_percent(ProgressBar.S_INSIDE, round_n=1)
         try:
-            response = self.session.get(asset.url, stream=True)
+            response = self.__session.get(asset.url, stream=True)
             response.raise_for_status()
-            archive = os.path.join(directory, asset.name)
-            if not os.path.isdir(os.path.dirname(archive)):
-                os.makedirs(os.path.dirname(archive))
-            with open(archive, "wb") as file_stream:
+            if not os.path.isdir(os.path.dirname(file_dest)):
+                os.makedirs(os.path.dirname(file_dest))
+            with open(file_dest, "wb") as file_stream:
                 for chunk in response.iter_content(chunk_size=1024*512):
                     progress.value += file_stream.write(chunk)
         except Exception as e:
-            progress.config_label_text("Error download - {}".format(e.__class__.__name__))
+            progress.config_label_text("Error download\n{}: {}".format(e.__class__.__name__, str(e)), justify="center")
             progress.hide_percent()
             return None
-        return archive
+        return file_dest
 
 class Updater:
 
@@ -144,6 +143,7 @@ class Updater:
         self.__git = GitRepository(Updater.PROJECT_OWNER, Updater.PROJECT_NAME)
         self.__filepath = os.path.dirname(sys.executable)
         self.__cache_directory = os.path.join(self.__filepath, "cache")
+        self.__cache_file = os.path.join(self.__cache_directory, "archive.zip")
         for file in glob.glob(os.path.join(self.__filepath, "**", "{}*".format(Updater.OLD_FILE_PREFIX)), recursive=True):
             try:
                 os.remove(file)
@@ -164,6 +164,8 @@ class Updater:
                     break
 
     def has_a_new_release(self) -> bool:
+        if os.path.isfile(self.__cache_file):
+            return True
         return bool(self.__has_a_release() and self.__latest_release.version > self.__actual_version)
 
     def __has_a_release(self) -> bool:
@@ -171,15 +173,18 @@ class Updater:
         return bool(self.__latest_release.exists and isinstance(self.__release_asset, GitReleaseAsset))
 
     def install_latest_version(self, progress: ProgressBar, *, compare_versions=True) -> str:
-        if (not compare_versions and not self.__has_a_release()) or (compare_versions and not self.has_a_new_release()):
-            return Updater.STATE_NO_NEW_RELEASE
-        archive = self.__git.download(self.__release_asset, self.__cache_directory, progress)
-        if archive is None or not os.path.isfile(archive):
-            if os.path.isdir(self.__cache_directory):
-                shutil.rmtree(os.path.dirname(self.__cache_directory), ignore_errors=True)
-            return Updater.STATE_ERROR_DOWNLOAD
+        if os.path.isfile(self.__cache_file):
+            archive = self.__cache_file
+        else:
+            if (not compare_versions and not self.__has_a_release()) or (compare_versions and not self.has_a_new_release()):
+                return Updater.STATE_NO_NEW_RELEASE
+            archive = self.__git.download(self.__release_asset, self.__cache_file, progress)
+            if archive is None or not os.path.isfile(archive):
+                if os.path.isdir(self.__cache_directory):
+                    shutil.rmtree(self.__cache_directory, ignore_errors=True)
+                return Updater.STATE_ERROR_DOWNLOAD
         try:
-            progress.show_label("Installing {}...".format(asset.name), ProgressBar.S_TOP)
+            progress.show_label("Installing {}...".format(os.path.basename(archive)), ProgressBar.S_TOP)
             progress.show_percent(ProgressBar.S_INSIDE, round_n=0)
             with ZipFile(archive, "r") as zip_file:
                 file_list = zip_file.namelist()
@@ -189,15 +194,20 @@ class Updater:
                 for i, file in enumerate(file_list, start=1):
                     try:
                         zip_file.extract(file, path=self.__filepath)
-                    except PermissionError:
+                    except (PermissionError, FileExistsError):
                         directory, filename = os.path.split(file)
-                        os.rename(os.path.join(self.__filepath, file), os.path.join(self.__filepath, directory, Updater.OLD_FILE_PREFIX + filename))
-                        zip_file.extract(file, path=self.__filepath)
+                        src = os.path.join(self.__filepath, file)
+                        dest = os.path.join(self.__filepath, directory, Updater.OLD_FILE_PREFIX + filename)
+                        try:
+                            os.rename(src, dest)
+                            zip_file.extract(file, path=self.__filepath)
+                        except (PermissionError, FileExistsError):
+                            pass
                     finally:
                         progress.value = i
         except Exception as e:
-            progress.config_label_text("Error installation - {}".format(e.__class__.__name__))
+            progress.config_label_text("Error installation\n{}: {}".format(e.__class__.__name__, str(e)), justify="center")
             progress.hide_percent()
             return Updater.STATE_ERROR_INSTALLATION
-        shutil.rmtree(os.path.dirname(self.__cache_directory), ignore_errors=True)
+        shutil.rmtree(self.__cache_directory, ignore_errors=True)
         return Updater.STATE_INSTALLED

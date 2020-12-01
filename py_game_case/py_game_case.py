@@ -207,7 +207,7 @@ class PyGameCase(MainWindow):
         default_logo_width = self.logo.width
         self.logo.load(RESOURCES.IMG["logo"])
         self.logo.midtop = self.midbottom
-        if SETTINGS.auto_check_update: # and self.launcher_updater.has_a_new_release():
+        if SETTINGS.auto_check_update and self.launcher_updater.has_a_new_release():
             self.logo.animate_move(self, speed=20, top=0, centerx=self.centerx)
             self.updater_window.mainloop()
             if not self.loop:

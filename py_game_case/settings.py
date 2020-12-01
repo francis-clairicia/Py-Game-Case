@@ -27,6 +27,7 @@ class UpdaterWindow(Dialog):
         })
 
         self.__updater = updater
+        self.__process_started = False
         self.__text = Text(
             "There is a new release.\nDo you want to install it ?",
             font=("calibri", 30), color=WHITE, justify=Text.T_CENTER
@@ -59,7 +60,7 @@ class UpdaterWindow(Dialog):
         self.stop()
 
     def close(self) -> None:
-        if not self.__progress_bar.is_shown():
+        if not self.__process_started:
             self.stop(force=True)
 
     def __start_install(self) -> None:
@@ -68,12 +69,18 @@ class UpdaterWindow(Dialog):
 
     @threaded_function
     def __start_install_thread(self) -> None:
+        self.__process_started = True
         state = self.__updater.install_latest_version(self.__progress_bar, compare_versions=False)
         if state == Updater.STATE_INSTALLED:
-            self.stop(force=True)
-            os.execv(sys.executable, [sys.executable])
+            self.after(1000, self.__call_restart_process)
         else:
-            self.stop()
+            self.__text.message = state
+            self.__text.show()
+            self.__process_started = False
+
+    def __call_restart_process(self) -> None:
+        self.stop(force=True)
+        os.execv(sys.executable, [sys.executable])
 
 class SettingsWindow(Dialog):
 
