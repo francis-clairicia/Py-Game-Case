@@ -5,10 +5,17 @@ import sys
 import configparser
 import pygame
 from typing import Any
-from my_pygame import Window, Dialog, Text, Button, ProgressBar
+from my_pygame import Window, Dialog, Text, Button, ProgressBar, CrossShape, Clickable
 from my_pygame import WHITE, BLACK, BLUE, BLUE_LIGHT, CYAN, BLUE_DARK, TRANSPARENT, GREEN, YELLOW
 from my_pygame import threaded_function
 from .updater import Updater
+
+class CrossShapeButton(Clickable, CrossShape):
+
+    def __init__(self, master: Window, *args, callback=None, **kwargs):
+        CrossShape.__init__(self, *args, **kwargs)
+        Clickable.__init__(self, master, callback=callback, highlight_color=YELLOW)
+        self.force_use_highlight_thickness(True)
 
 class UpdaterWindow(Dialog):
 
@@ -28,6 +35,12 @@ class UpdaterWindow(Dialog):
 
         self.__updater = updater
         self.__process_started = False
+
+        cross_shape_size = min(0.1 * self.frame.w, 0.1 * self.frame.h)
+        self.__button_quit = CrossShapeButton(
+            self, cross_shape_size, cross_shape_size, TRANSPARENT, outline=5, outline_color=WHITE,
+            callback=self.stop
+        )
         self.__text = Text(
             "There is a new release.\nDo you want to install it ?",
             font=("calibri", 30), color=WHITE, justify=Text.T_CENTER
@@ -40,43 +53,54 @@ class UpdaterWindow(Dialog):
         self.__progress_bar.config_value_text(font=("calibri", 25), color=WHITE)
 
     def on_start_loop(self) -> None:
-        self.show_all(without=[self.__progress_bar])
-        self.__button_yes.focus_set()
         self.frame.midtop = self.midbottom
         self.frame.animate_move(self, speed=20, at_every_frame=self.place_objects, centerx=self.centerx, bottom=self.bottom - 50)
 
     def place_objects(self) -> None:
+        self.__button_quit.move(top=self.frame.top + 10, left=self.frame.left + 10)
         self.__text.move(top=self.frame.top + 10, centerx=self.frame.centerx)
         self.__button_yes.move(bottom=self.frame.bottom - 20, centerx=self.frame.centerx - self.frame.w // 4)
         self.__button_no.move(bottom=self.frame.bottom - 20, centerx=self.frame.centerx + self.frame.w // 4)
         self.__progress_bar.center = self.frame.center
 
     def set_grid(self) -> None:
-        self.__button_yes.set_obj_on_side(on_right=self.__button_no)
-        self.__button_no.set_obj_on_side(on_left=self.__button_yes)
+        self.__button_quit.set_obj_on_side(on_bottom=self.__button_yes, on_right=self.__button_yes)
+        self.__button_yes.set_obj_on_side(on_left=self.__button_quit, on_right=self.__button_no, on_top=self.__button_quit)
+        self.__button_no.set_obj_on_side(on_left=self.__button_yes, on_top=self.__button_quit)
 
     def animate_stop(self) -> None:
         self.frame.animate_move(self, speed=20, at_every_frame=self.place_objects, midtop=self.midbottom)
         self.stop()
 
-    def close(self) -> None:
+    def stop(self, *args, **kwargs) -> None:
         if not self.__process_started:
-            self.stop(force=True)
+            super().stop(*args, **kwargs)
+
+    def start(self, install=False):
+        if not install:
+            self.show_all(without=[self.__progress_bar])
+            self.__button_yes.focus_set()
+        else:
+            self.hide_all(without=[self.__progress_bar])
+            self.after(0, self.__start_install_thread)
+        self.mainloop()
 
     def __start_install(self) -> None:
         self.hide_all(without=[self.__progress_bar])
-        self.__start_install_thread()
+        self.__start_install_thread(compare_versions=False)
 
     @threaded_function
-    def __start_install_thread(self) -> None:
+    def __start_install_thread(self, compare_versions=True) -> None:
         self.__process_started = True
-        state = self.__updater.install_latest_version(self.__progress_bar, compare_versions=False)
+        state = self.__updater.install_latest_version(self.__progress_bar, compare_versions=compare_versions)
+        self.__text.message = Updater.get_message(state)
+        self.__text.show()
         if state == Updater.STATE_INSTALLED:
-            self.after(1000, self.__call_restart_process)
+            self.__text.message += " Restarting..."
+            self.after(500, self.__call_restart_process)
         else:
-            self.__text.message = state
-            self.__text.show()
             self.__process_started = False
+            self.__button_quit.show()
 
     def __call_restart_process(self) -> None:
         self.stop(force=True)

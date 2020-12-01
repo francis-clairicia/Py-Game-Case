@@ -5,10 +5,10 @@ import subprocess
 from typing import Callable, Sequence
 import psutil
 import pygame
-from my_pygame import MainWindow, Window, WindowTransition
-from my_pygame import Image, ProgressBar, Button, Sprite, RectangleShape, HorizontalGradientShape
+from my_pygame import MainWindow, Window, Dialog, WindowTransition
+from my_pygame import Image, Text, ProgressBar, Button, Sprite, RectangleShape, HorizontalGradientShape
 from my_pygame import ButtonListVertical, DrawableListHorizontal
-from my_pygame import TRANSPARENT, WHITE, BLACK, YELLOW, GREEN
+from my_pygame import TRANSPARENT, WHITE, BLACK, YELLOW, GREEN, BLUE
 from my_pygame import set_color_alpha, change_brightness
 from my_pygame import ThemeNamespace, threaded_function
 from .constants import RESOURCES, GAMES, SETTINGS
@@ -75,8 +75,8 @@ class GameLaunchTransition(WindowTransition):
 
 class TitleButton(Button):
 
-    def __init__(self, master: Window, on_hover: Callable[..., None], *args, **kwargs):
-        super().__init__(master, *args, **kwargs)
+    def __init__(self, master: Window, on_hover=None, **kwargs):
+        super().__init__(master, **kwargs)
         self.focus_on_hover(True)
         self.__on_hover = on_hover
 
@@ -90,7 +90,8 @@ class TitleButton(Button):
 
     def on_hover(self) -> None:
         super().on_hover()
-        self.__on_hover()
+        if callable(self.__on_hover):
+            self.__on_hover()
 
 class SettingsButton(Button):
 
@@ -106,6 +107,38 @@ class SettingsButton(Button):
         pygame.draw.line(surface, self.outline_color, self.topleft, self.topright, width=self.outline)
         pygame.draw.line(surface, self.outline_color, self.midleft, self.midright, width=self.outline)
         pygame.draw.line(surface, self.outline_color, self.bottomleft, self.bottomright, width=self.outline)
+
+class SideBoard(Dialog):
+
+    def __init__(self, master: Window):
+        super().__init__(master, width_ratio=0.25, height_ratio=1, outline=1, outline_color=WHITE, bg_color=BLUE)
+        self.bind_key(pygame.K_ESCAPE, lambda event: self.animate_quit())
+
+        self.text_title = Text("Options", font=("calibri", 50), color=WHITE)
+        self.button_list = ButtonListVertical(offset=20, justify="right")
+
+    def add_option(self, name: str, callback: Callable[..., None]) -> None:
+        button = TitleButton(
+            self, text=name, callback=lambda: self.__call(callback),
+            x_size=self.frame.w * 0.9, y_add_size=20, justify=("right", "center"), offset=(-10, 0)
+        )
+        self.button_list.add(button)
+
+    def place_objects(self) -> None:
+        self.text_title.move(centerx=self.frame.centerx, top=self.frame.top + 20)
+        self.button_list.move(top=self.text_title.bottom + 50, right=self.frame.right - 10)
+
+    def on_start_loop(self) -> None:
+        self.frame.left = self.right
+        self.frame.animate_move(self, speed=50, at_every_frame=self.place_objects, right=self.right)
+
+    def animate_quit(self) -> None:
+        self.frame.animate_move(self, speed=50, at_every_frame=self.place_objects, left=self.right)
+        self.stop()
+
+    def __call(self, callback: Callable[..., None]):
+        self.animate_quit()
+        callback()
 
 class PyGameCase(MainWindow):
 
@@ -124,7 +157,7 @@ class PyGameCase(MainWindow):
             "active_bg": set_color_alpha(WHITE, 50),
             "highlight_color": WHITE,
             "highlight_thickness": 3,
-            "x_add_size": self.w * 0.25,
+            "x_size": self.w * 0.25,
             "y_add_size": 30,
             "justify": ("left", "center"),
             "offset": (10, 0),
@@ -170,8 +203,11 @@ class PyGameCase(MainWindow):
 
         self.settings_section = SettingsWindow(self)
         self.updater_window = UpdaterWindow(self, self.launcher_updater)
+        self.side_board = SideBoard(self)
+        self.side_board.add_option("Settings", self.settings_section.mainloop)
+        self.side_board.add_option("Update", lambda: self.updater_window.start(install=True))
 
-        self.button_settings = SettingsButton(self, size=40, callback=self.settings_section.mainloop)
+        self.button_settings = SettingsButton(self, size=40, callback=self.side_board.mainloop)
         self.button_settings.force_use_highlight_thickness(True)
 
         self.transition = GameLaunchTransition()
@@ -209,7 +245,7 @@ class PyGameCase(MainWindow):
         self.logo.midtop = self.midbottom
         if SETTINGS.auto_check_update and self.launcher_updater.has_a_new_release():
             self.logo.animate_move(self, speed=20, top=0, centerx=self.centerx)
-            self.updater_window.mainloop()
+            self.updater_window.start()
             if not self.loop:
                 return
         self.logo.animate_move(self, speed=20, midbottom=self.center)
@@ -237,6 +273,7 @@ class PyGameCase(MainWindow):
         for obj, center in save_objects_center:
             obj.animate_move(self, speed=20, center=center)
         self.focus_mode(Button.MODE_KEY)
+        pygame.event.clear()
 
     def on_quit(self) -> None:
         self.launcher_updater.close()

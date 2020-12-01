@@ -137,6 +137,12 @@ class Updater:
     STATE_ERROR_DOWNLOAD = "error_download"
     STATE_ERROR_INSTALLATION = "error_installation"
     STATE_INSTALLED = "installed"
+    __MESSAGES = {
+        STATE_NO_NEW_RELEASE: "No new release available.",
+        STATE_ERROR_DOWNLOAD: "Error while downloading update.",
+        STATE_ERROR_INSTALLATION: "Error while installing update.",
+        STATE_INSTALLED: "Installation succeeded."
+    }
 
     def __init__(self, actual_version: str):
         self.__actual_version = packaging.version.Version(actual_version)
@@ -154,6 +160,10 @@ class Updater:
 
     def close(self) -> None:
         self.__git.close()
+
+    @staticmethod
+    def get_message(state: str) -> str:
+        return Updater.__MESSAGES[state]
 
     def check_for_new_release(self) -> None:
         if not isinstance(self.__latest_release, GitRelease):

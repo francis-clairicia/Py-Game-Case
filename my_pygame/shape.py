@@ -238,6 +238,23 @@ class CircleShape(Shape):
         lambda self, value: self.config(draw_bottom_right=value)
     )
 
+class CrossShape(Shape):
+
+    def __init__(self, width: int, height: int, color: pygame.Color, *, outline=2, outline_color=BLACK, theme=None):
+        super().__init__(color, outline, outline_color)
+        self.set_size(width, height)
+
+    def shape_update(self) -> None:
+        try:
+            self.image = create_surface(self.size)
+            self.image.fill(self.color)
+            image_rect = self.image.get_rect()
+            pygame.draw.line(self.image, self.outline_color, image_rect.topleft, image_rect.bottomright, width=self.outline)
+            pygame.draw.line(self.image, self.outline_color, image_rect.topright, image_rect.bottomleft, width=self.outline)
+            self.mask_update()
+        except:
+            pass
+
 class GradientShape(Drawable, use_parent_theme=False):
 
     TYPE_HORIZONTAL = horizontal

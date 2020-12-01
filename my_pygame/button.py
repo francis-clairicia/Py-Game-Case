@@ -14,7 +14,7 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
     def __init__(self, master: Window, text=str(), *, font=None, img=None, compound="left",
                  shadow=False, shadow_x=0, shadow_y=0, shadow_color=BLACK,
                  callback: Optional[Callable[..., Any]] = None, state="normal",
-                 size=None, x_add_size=20, y_add_size=20,
+                 size=None, x_size=None, y_size=None, x_add_size=20, y_add_size=20,
                  bg=GRAY_LIGHT, fg=BLACK, outline=2, outline_color=BLACK,
                  hover_bg=WHITE, hover_fg=None, hover_sound=None,
                  active_bg=GRAY, active_fg=None, on_click_sound=None,
@@ -37,6 +37,8 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
         self.__text_active_offset = active_offset
         self.__x_add_size = round(x_add_size)
         self.__y_add_size = round(y_add_size)
+        self.__x_size = int(max(round(x_size), 0)) if x_size is not None else None
+        self.__y_size = int(max(round(y_size), 0)) if y_size is not None else None
         self.__custom_size = custom_size = None
         if size is None:
             size = (self.__text.w + self.__x_add_size, self.__text.h + self.__y_add_size)
@@ -45,6 +47,7 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
             custom_size = size
         RectangleShape.__init__(self, *size, color=bg, outline=outline, outline_color=outline_color, **kwargs)
         self.__custom_size = custom_size
+        self.__update_size()
         self.__bg = {
             Clickable.NORMAL: {
                 "normal": bg,
@@ -117,7 +120,9 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
 
     def __update_size(self) -> None:
         if self.__custom_size is None:
-            RectangleShape.set_size(self, self.__text.w + self.__x_add_size, self.__text.h + self.__y_add_size)
+            width = self.__text.w + self.__x_add_size if self.__x_size is None else self.__x_size
+            height = self.__text.h + self.__y_add_size if self.__y_size is None else self.__y_size
+            RectangleShape.set_size(self, width, height)
 
     def focus_drawing(self, surface: pygame.Surface) -> None:
         Clickable.focus_drawing(self, surface)
