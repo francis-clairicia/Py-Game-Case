@@ -18,7 +18,7 @@ def zip_compress():
     output_folder = options.get("build_exe", ".")
     output_zip = os.path.join(output_folder, zip_filename)
     all_files = list()
-    all_executables = [exec_file["name"] + ".exe" for exec_file in executable_infos["executables"]]
+    all_executables = [exec_file["name"] for exec_file in executable_infos["executables"]]
     pattern_list = [*all_executables, "lib", "python*.dll", "vcruntime*.dll", *options["include_files"]]
     for pattern in pattern_list:
         pattern = os.path.join(output_folder, pattern)
@@ -120,10 +120,14 @@ if sys.platform.startswith("win"):
 
 executables = list()
 for infos in executable_infos["executables"]:
+    if sys.platform.startswith("win"):
+        infos["name"] += ".exe"
+    else:
+        infos["base"] = None
     target = Executable(
         script=os.path.join(sys.path[0], infos["script"]),
-        base=infos["base"] if sys.platform.startswith("win") else None,
-        targetName=infos["name"] + (".exe" if sys.platform.startswith("win") else ""),
+        base=infos["base"],
+        targetName=infos["name"],
         icon=infos["icon"],
         copyright=executable_infos["copyright"]
     )
