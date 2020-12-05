@@ -11,6 +11,7 @@ from .gradients import horizontal, vertical, radial, squared
 class Shape(Drawable, use_parent_theme=False):
 
     def __init__(self, color: pygame.Color, outline: int, outline_color: pygame.Color, theme=None):
+        # pylint: disable=unused-argument
         Drawable.__init__(self)
         self.color = color
         self.outline = outline
@@ -44,6 +45,7 @@ class Shape(Drawable, use_parent_theme=False):
         self.__outline_color = pygame.Color(value) if value is not None else TRANSPARENT
 
     def set_size(self, *size: Union[int, tuple[int, int]], smooth=True) -> None:
+        # pylint: disable=unused-argument
         Drawable.set_size(self, *(size), smooth=False)
         self.shape_update()
 
@@ -292,13 +294,14 @@ class GradientShape(Drawable, use_parent_theme=False):
         if self.w > 0 and self.h > 0:
             start_color = (self.left_color.r, self.left_color.g, self.left_color.b, self.left_color.a)
             end_color = (self.right_color.r, self.right_color.g, self.right_color.b, self.right_color.a)
-            if self.__gradient_type == self.TYPE_RADIAL:
+            if self.__gradient_type is self.TYPE_RADIAL:
                 size = min(self.width // 2, self.height // 2)
             else:
                 size = self.size
             self.image = self.__gradient_type(size, start_color, end_color)
 
     def set_size(self, *size: Union[int, tuple[int, int]], smooth=True) -> None:
+        # pylint: disable=unused-argument
         Drawable.set_size(self, *size, smooth=False)
         self.__update_image()
 

@@ -1,9 +1,9 @@
 # -*- coding: Utf-8 -*
 
 import os
+import pickle
 import pygame
 from typing import Union, Any, Iterator, Callable, TypeVar
-from .thread import threaded_function
 
 _ResourceType = TypeVar('_ResourceType')
 
@@ -42,8 +42,49 @@ def find_key_in_container(key: str, container: dict[str, Any]) -> tuple[Union[in
             return key_path[:key_path.index(key) + 1]
     return None
 
+class ResourcesCompiler:
+
+    __IMG_EXT = [".png", ".jpg", ".jpeg", ".bmp", ".gif"]
+    # __SOUND_EXT = [".ogg", ".wav"]
+    __COMPILED_IMG_EXT = ".surface"
+    # __COMPILED_SOUND_EXT = ".surface"
+
+    @staticmethod
+    def get_compiled_img_extension() -> str:
+        return ResourcesCompiler.__COMPILED_IMG_EXT
+
+    @staticmethod
+    def compile(path: str, *, delete=False) -> None:
+        #pylint: disable=unused-variable
+        path = str(path).replace("/", "\\")
+        print()
+        if os.path.isfile(path):
+            ResourcesCompiler.__compile_file(path, delete)
+        elif os.path.isdir(path):
+            for root, folders, files in os.walk(path):
+                for file in files:
+                    ResourcesCompiler.__compile_file(os.path.join(root, file), delete)
+
+    @staticmethod
+    def __compile_file(path: str, delete: bool) -> None:
+        path_without_extension, extension = os.path.splitext(path)
+        if extension in ResourcesCompiler.__IMG_EXT:
+            compiled_img_path = path_without_extension + ResourcesCompiler.__COMPILED_IMG_EXT
+            print("->", path, "compiled to", compiled_img_path)
+            surface = pygame.image.load(path)
+            file_format = "RGBA"
+            buffer_dict = {
+                "string": pygame.image.tostring(surface, file_format),
+                "size": surface.get_size(),
+                "format": file_format
+            }
+            with open(compiled_img_path, "wb") as compiled_file:
+                pickle.dump(buffer_dict, compiled_file)
+            if delete:
+                os.remove(path)
+
 class ResourcesLoader(dict):
-    
+
     def __init__(self, resources_loader: Callable[[str], Any]):
         super().__init__()
         self.__files = dict()
@@ -53,7 +94,7 @@ class ResourcesLoader(dict):
     def load(self) -> None:
         if not self:
             self.__not_loaded |= self.__files
-        for key_path in find_in_iterable(self.__not_loaded, valid_callback=os.path.isfile):
+        for key_path in find_in_iterable(self.__not_loaded):
             key, container = travel_container(key_path, self.__not_loaded)
             if callable(self.__resources_loader):
                 container[key] = self.__resources_loader(container[key])
@@ -64,7 +105,7 @@ class ResourcesLoader(dict):
         self.update({key: value})
 
     def __contains__(self, key: str) -> bool:
-        return (find_key_in_container(key, self) is not None)
+        return find_key_in_container(key, self) is not None
 
     def update(self, resource_dict: dict[str, Any]) -> None:
         self.__files |= resource_dict
@@ -84,7 +125,18 @@ class ResourcesLoader(dict):
 
 class ImageLoader(ResourcesLoader):
     def __init__(self):
-        super().__init__(lambda resource: pygame.image.load(resource).convert_alpha())
+        super().__init__(self.__loader_function)
+
+    def __loader_function(self, resource: str) -> pygame.Surface:
+        if resource.endswith(ResourcesCompiler.get_compiled_img_extension()):
+            with open(resource, "rb") as compiled_file:
+                buffer_dict = pickle.load(compiled_file)
+            surface = pygame.image.fromstring(buffer_dict["string"], buffer_dict["size"], buffer_dict["format"])
+        else:
+            surface = pygame.image.load(resource)
+        surface = surface.convert_alpha()
+        surface.lock()
+        return surface
 
 class FontLoader(ResourcesLoader):
     def __init__(self):
@@ -96,7 +148,10 @@ class MusicLoader(ResourcesLoader):
 
 class SoundLoader(ResourcesLoader):
     def __init__(self):
-        super().__init__(lambda resource: pygame.mixer.Sound(resource))
+        super().__init__(self.__loader_function)
+
+    def __loader_function(self, resource: str) -> pygame.mixer.Sound:
+        return pygame.mixer.Sound(resource)
 
 class Resources:
 
@@ -155,3 +210,11 @@ class Resources:
     FONT = property(lambda self: self.__font, lambda self, value: self.__font.update(value))
     MUSIC = property(lambda self: self.__music, lambda self, value: self.__music.update(value))
     SFX = property(lambda self: self.__sfx, lambda self, value: self.__sfx.update(value))
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("path", help="Resource file or directory")
+    parser.add_argument("--delete", help="Delete the files after compiling", action="store_true")
+    args = parser.parse_args()
+    ResourcesCompiler.compile(args.path, delete=args.delete)

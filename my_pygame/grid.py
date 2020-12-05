@@ -76,12 +76,12 @@ class GridCell(Focusable, Drawable, draw_focus_outline=False):
     def on_focus_set(self) -> None:
         if isinstance(self.__drawable, Focusable):
             self.__drawable.focus_set()
-    
+
     row = property(lambda self: self.__row)
     column = property(lambda self: self.__column)
 
 class GridRow:
-    
+
     def __init__(self, master, row: int):
         self.__master = master
         self.__row = row
@@ -196,7 +196,7 @@ class Grid(Drawable, use_parent_theme=False):
         self.fill(self.__bg_color)
 
     def __getitem__(self, cell: tuple[int, int]) -> Union[Drawable, Focusable]:
-        return self.get(*cell)
+        return self.get_obj_in_cell(*cell)
 
     def __setitem__(self, cell: tuple[int, int], infos: dict[str, Union[int, Drawable, Focusable]]) -> None:
         self.place(row=cell[0], column=cell[1], **infos)
@@ -270,13 +270,13 @@ class Grid(Drawable, use_parent_theme=False):
             top += self.__max_height_rows[i]
 
     def set_size(self, *size: Union[int, tuple[int, int]], smooth=True) -> None:
-        return
+        pass
 
     def set_width(self, width: float, smooth=True)-> None:
-        return
+        pass
 
     def set_height(self, height: float, smooth=True) -> None:
-        return
+        pass
 
     def __set_obj_on_side_intern(self) -> None:
         for row_index, row in self.rows.items():

@@ -6,7 +6,7 @@ from typing import Union, Optional, Iterator
 import pickle
 import pygame
 
-class Joystick(object):
+class Joystick:
 
     def __init__(self, index: int):
         self.__index = index
@@ -233,7 +233,7 @@ class Joystick(object):
 
 class JoystickList(object):
 
-    __slots__ = ("__list")
+    __slots__ = ("__list",)
 
     def __init__(self):
         self.__list = list()

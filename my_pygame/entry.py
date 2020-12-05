@@ -15,6 +15,7 @@ class Entry(Clickable, RectangleShape):
                  bg=WHITE, fg=BLACK, interval=500,
                  state="normal", highlight_color=GRAY, highlight_thickness=2,
                  hover_sound=None, on_click_sound=None, disabled_sound=None, theme=None, **kwargs):
+        # pylint: disable=unused-argument
         self.__text = Text(
             font=font, color=fg, shadow=shadow, shadow_x=shadow_x, shadow_y=shadow_y, shadow_color=shadow_color,
             img=None, compound="left", wrap=0, justify="left"

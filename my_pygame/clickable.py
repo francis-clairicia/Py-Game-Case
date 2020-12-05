@@ -1,6 +1,6 @@
 # -*- coding: Utf-8 -*
 
-from typing import Optional, Union, Any, Callable
+from typing import Optional, Any, Callable
 import pygame
 from pygame.event import Event
 from .focusable import Focusable

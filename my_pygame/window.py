@@ -8,15 +8,13 @@ import pygame
 from .drawable import Drawable
 from .focusable import Focusable
 from .text import Text
-from .shape import RectangleShape
-from .progress import ProgressBar
-from .list import DrawableList, AbstractDrawableListAligned
+from .list import DrawableList
 from .grid import Grid, GridCell
-from .joystick import Joystick, JoystickList
+from .joystick import JoystickList
 from .keyboard import Keyboard
 from .cursor import Cursor
 from .clock import Clock
-from .colors import BLACK, WHITE, BLUE, TRANSPARENT
+from .colors import BLACK, WHITE, BLUE
 from .resources import Resources
 from .multiplayer import ServerSocket, ClientSocket
 from .path import set_constant_file
@@ -255,6 +253,7 @@ class Window(object):
         return object.__setattr__(self, name, obj)
 
     def __delattr__(self, name) -> None:
+        obj = getattr(self, name)
         if isinstance(obj, (Drawable, DrawableList)) and name != "_Window__objects":
             self.objects.remove(obj)
         return object.__delattr__(self, name)
@@ -618,6 +617,7 @@ class Window(object):
     def bind_key(self, key_value: int, callback: Callable[..., Any], hold: Optional[bool] = False) -> None:
         self.__bind_key(self.__key_handler_dict, self.__key_state_dict, key_value, callback, hold)
 
+    @staticmethod
     def bind_key_all_window(key_value: int, callback: Callable[..., Any], hold: Optional[bool] = False) -> None:
         Window.__bind_key(Window.__all_window_key_handler_dict, Window.__all_window_key_state_dict, key_value, callback, hold)
 
@@ -870,7 +870,7 @@ class MainWindow(Window):
         Window.bind_multiple_event_all_window((pygame.JOYDEVICEADDED, pygame.CONTROLLERDEVICEADDED), self.joystick.event_connect)
         Window.bind_multiple_event_all_window((pygame.JOYDEVICEREMOVED, pygame.CONTROLLERDEVICEREMOVED), self.joystick.event_disconnect)
 
-    def mainloop(self, transition: Optional[WindowTransition] = None,
+    def mainloop(self, *, transition: Optional[WindowTransition] = None,
                  action_before_loop: Optional[Callable[..., Any]] = None,
                  action_after_loop: Optional[Callable[..., Any]] = None) -> int:
         self.__before_loop_callback = action_before_loop
@@ -930,5 +930,5 @@ class MainWindow(Window):
     def __set_mode(self, size: tuple[int, int], flags: int) -> None:
         if not isinstance(size, (list, tuple)) or len(size) != 2 or size[0] <= 0 or size[1] <= 0:
             size = (0, 0)
-        surface = pygame.display.set_mode(size, flags)
+        pygame.display.set_mode(size, flags)
         pygame.event.clear()

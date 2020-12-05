@@ -14,8 +14,8 @@ FONT_FOLDER = set_constant_directory(RESOURCES_FOLDER, "font", special_msg="Font
 
 RESOURCES.IMG = {
     "icon": set_constant_file(IMG_FOLDER, "icon.ico"),
-    "logo": set_constant_file(IMG_FOLDER, "logo.png"),
-    "arrow": set_constant_file(IMG_FOLDER, "Right-Arrow.png")
+    "logo": set_constant_file(IMG_FOLDER, "logo.surface"),
+    "arrow": set_constant_file(IMG_FOLDER, "Right-Arrow.surface")
 }
 
 RESOURCES.FONT = {

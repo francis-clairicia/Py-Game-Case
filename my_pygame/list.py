@@ -5,7 +5,6 @@ import pygame
 from .drawable import Drawable
 from .focusable import Focusable
 from .grid import Grid
-from .shape import RectangleShape
 from .colors import TRANSPARENT
 
 class DrawableList:
@@ -214,8 +213,8 @@ class AbstractDrawableListAligned(DrawableList):
         DrawableList.add_multiple(self, iterable_of_objects)
         self.__align_all_objects()
 
-    def remove(self, obj: Drawable, *objs: Drawable) -> None:
-        DrawableList.remove(self, obj, *(objs))
+    def remove(self, *obj_list: Drawable) -> None:
+        DrawableList.remove(self, *(obj_list))
         self.__align_all_objects()
 
     def remove_from_index(self, index: int) -> None:
@@ -263,8 +262,8 @@ class ButtonListVertical(DrawableListVertical):
         DrawableListVertical.add_multiple(self, iterable_of_objects)
         self.__handle_buttons()
 
-    def remove(self, button: Focusable, *buttons: Focusable) -> None:
-        DrawableListVertical.remove(self, *[button, *buttons])
+    def remove(self, *buttons: Focusable) -> None:
+        DrawableListVertical.remove(self, *(buttons))
         self.__handle_buttons()
 
     def remove_from_index(self, index: int) -> None:
@@ -325,8 +324,8 @@ class ButtonListHorizontal(DrawableListHorizontal):
         DrawableListHorizontal.add_multiple(self, iterable_of_objects)
         self.__handle_buttons()
 
-    def remove(self, button: Focusable, *buttons: Focusable) -> None:
-        DrawableListHorizontal.remove(self, *[button, *buttons])
+    def remove(self, *buttons: Focusable) -> None:
+        DrawableListHorizontal.remove(self, *(buttons))
         self.__handle_buttons()
 
     def remove_from_index(self, index: int) -> None:

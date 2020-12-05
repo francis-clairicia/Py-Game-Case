@@ -26,6 +26,7 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
                  highlight_color=BLUE, highlight_thickness=2, cursor=None, disabled_cursor=None,
                  justify=("center", "center"), offset=(0, 0), hover_offset=(0, 0), active_offset=(0, 0),
                  theme=None, **kwargs):
+        # pylint: disable=unused-argument
         self.__text = Text(
             text, font=font, color=fg, justify=Text.T_CENTER, img=img, compound=compound,
             shadow=shadow, shadow_x=shadow_x, shadow_y=shadow_y, shadow_color=shadow_color

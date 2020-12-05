@@ -7,9 +7,10 @@ import argparse
 import glob
 from zipfile import ZipFile, ZIP_DEFLATED
 from cx_Freeze import setup, Executable
+from my_pygame.resources import ResourcesCompiler
 
 def zip_compress():
-    global executable_infos, options
+    #pylint: disable=unused-variable
     zip_filename = "{}-{}.zip".format(
         executable_infos["project_name"],
         platform.system(),
@@ -19,7 +20,11 @@ def zip_compress():
     output_zip = os.path.join(output_folder, zip_filename)
     all_files = list()
     all_executables = [exec_file["name"] for exec_file in executable_infos["executables"]]
-    pattern_list = [*all_executables, "lib", "python*.dll", "vcruntime*.dll", *options["include_files"]]
+    pattern_list = [*all_executables, "lib", *options["include_files"]]
+    if sys.platform.startswith("win"):
+        pattern_list.extend(["python*.dll", "vcruntime*.dll"])
+    if output_folder != ".":
+        ResourcesCompiler.compile(output_folder, delete=True)
     for pattern in pattern_list:
         pattern = os.path.join(output_folder, pattern)
         for path in glob.glob(pattern):
@@ -45,6 +50,7 @@ def get_application_version(app: str) -> str:
 
 parser = argparse.ArgumentParser(prog="setup.py", description="Setup for executable freezing")
 parser.add_argument("--zip", help="Create a zip file when it's finished", action="store_true")
+parser.add_argument("--zip-no-build", help="Create a zip file without build project", action="store_true")
 parser.add_argument("--version", help="Use a custom version instead of applcation version")
 args = parser.parse_args()
 
@@ -108,6 +114,16 @@ if OK == "n":
 
 print("-----------------------------------------------------------------------------------")
 
+for infos in executable_infos["executables"]:
+    if sys.platform.startswith("win"):
+        infos["name"] += ".exe"
+    else:
+        infos["base"] = None
+
+if args.zip_no_build:
+    zip_compress()
+    sys.exit(0)
+
 if "tkinter" not in options["includes"]:
     options["excludes"].append("tkinter")
 
@@ -120,10 +136,6 @@ if sys.platform.startswith("win"):
 
 executables = list()
 for infos in executable_infos["executables"]:
-    if sys.platform.startswith("win"):
-        infos["name"] += ".exe"
-    else:
-        infos["base"] = None
     target = Executable(
         script=os.path.join(sys.path[0], infos["script"]),
         base=infos["base"],

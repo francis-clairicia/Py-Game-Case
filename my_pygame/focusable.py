@@ -18,6 +18,7 @@ class Focusable(ThemedObject):
     __draw_focus_outline = dict()
 
     def __init_subclass__(cls, draw_focus_outline=True, **kwargs) -> None:
+        # pylint: disable=arguments-differ
         super().__init_subclass__(**kwargs)
         Focusable.__draw_focus_outline[cls] = bool(draw_focus_outline)
 
@@ -88,9 +89,7 @@ class Focusable(ThemedObject):
     def take_focus(self, status=None) -> bool:
         if status is not None:
             self.__take_focus = bool(status)
-        shown = True
-        if hasattr(self, "is_shown") and callable(self.is_shown) and not self.is_shown():
-            shown = False
+        shown = getattr(self, "is_shown", lambda: True)()
         return bool(self.__take_focus and shown)
 
     def focus_set(self) -> None:

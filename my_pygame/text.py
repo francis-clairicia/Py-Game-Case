@@ -19,6 +19,7 @@ class Text(Drawable, use_parent_theme=False):
     def __init__(self, message=str(), *, font=None, color=BLACK, wrap=0,
                  justify="left", shadow=False, shadow_x=0, shadow_y=0, shadow_color=BLACK,
                  img=None, compound="left", theme=None):
+        # pylint: disable=unused-argument
         Drawable.__init__(self)
         self.__str = str()
         self.__wrap = 0

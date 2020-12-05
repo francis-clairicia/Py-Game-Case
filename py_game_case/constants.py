@@ -13,8 +13,8 @@ RESOURCES_FOLDER = set_constant_directory("resources", "py_game_case", special_m
 IMG_FOLDER = set_constant_directory(RESOURCES_FOLDER, "img", special_msg="Images folder not present")
 
 RESOURCES.IMG = {
-    "icon": set_constant_file(IMG_FOLDER, "icon.png"),
-    "logo": set_constant_file(IMG_FOLDER, "logo.png"),
+    "icon": set_constant_file(IMG_FOLDER, "icon.surface"),
+    "logo": set_constant_file(IMG_FOLDER, "logo.surface"),
 }
 
 GAMES = {
@@ -22,7 +22,7 @@ GAMES = {
     "four_in_a_row": {"name": "4 in a row", "window": FourInARowWindow},
 }
 
-RESOURCES.IMG |= {game: set_constant_file(IMG_FOLDER, "preview_{}.png".format(game)) for game in GAMES}
+RESOURCES.IMG |= {game: set_constant_file(IMG_FOLDER, "preview_{}.surface".format(game)) for game in GAMES}
 
 ##########################################################################################################################
 
@@ -63,7 +63,7 @@ class Settings:
             self.__parser.add_section(section)
         self.__parser[section][option] = str(value)
         self.__save()
-    
+
     launch_in_same_window = property(
         lambda self: self.getboolean("GENERAL", "launch_in_same_window", fallback=True),
         lambda self, value: self.set("GENERAL", "launch_in_same_window", value),

@@ -6,7 +6,6 @@ from pygame.sprite import Sprite
 from pygame.math import Vector2
 from .surface import create_surface
 from .theme import ThemedObject
-from .thread import threaded_function
 from .clock import Clock
 
 class Drawable(Sprite, ThemedObject):
@@ -63,7 +62,7 @@ class Drawable(Sprite, ThemedObject):
             surface = surface.image
         elif not isinstance(surface, pygame.Surface):
             surface = create_surface((0, 0))
-        self.__surface = surface
+        self.__surface = (surface if not surface.get_locked() else surface.copy()).convert_alpha()
         self.__rect = self.__surface.get_rect(**self.__former_moves)
         self.mask_update()
 
@@ -232,7 +231,7 @@ class Drawable(Sprite, ThemedObject):
 
     def animate_scale_width_in_background(self, master, width: int, offset=1, milliseconds=10, at_every_frame=None, after_animation=None) -> None:
         self.__animation.scale_width(width=width, offset=offset, milliseconds=milliseconds)
-        self.__animation.start_in_background(master, at_every_frame)
+        self.__animation.start_in_background(master, at_every_frame, after_animation)
 
     def animate_scale_height(self, master, height: int, offset=1, milliseconds=10, at_every_frame=None) -> None:
         self.__animation.scale_height(height=height, offset=offset, milliseconds=milliseconds)
@@ -431,7 +430,7 @@ class Animation:
         return isinstance(self.__animations[animation], AbstractAnimationClass)
 
     def __only_move_animation(self) -> bool:
-        return (self.animation_set("move") and all(self.animation_set(name) for name in self.__animations if name != "move"))
+        return self.animation_set("move") and all(self.animation_set(name) for name in self.__animations if name != "move")
 
     def __clear(self) -> None:
         for key in self.__animations:

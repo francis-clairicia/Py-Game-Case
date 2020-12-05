@@ -3,12 +3,9 @@
 import os
 import sys
 import argparse
-import packaging.version
 import psutil
 from py_game_case import PyGameCase
 from py_game_case.constants import GAMES
-from navy import NavyWindow
-from four_in_a_row import FourInARowWindow
 
 def find_process_by_name(name: str) -> list[str]:
     process_list = list()
@@ -20,7 +17,7 @@ def find_process_by_name(name: str) -> list[str]:
 def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("game", nargs="?")
-    args, unknown = parser.parse_known_args()
+    args = parser.parse_known_args()[0]
 
     if args.game in GAMES:
         window = GAMES[args.game]["window"]()

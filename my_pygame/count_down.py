@@ -46,6 +46,7 @@ class CountDown(Text):
             self.__end()
 
     def __end(self) -> None:
+        # pylint: disable=not-callable
         self.hide()
         if callable(self.__callback):
             self.__callback()

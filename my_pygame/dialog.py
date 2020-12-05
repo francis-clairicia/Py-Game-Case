@@ -13,7 +13,7 @@ class DialogFrame(RectangleShape):
 class Dialog(Window):
     def __init__(self, master: Window, width_ratio=0.5, height_ratio=0.5,
                  bg_color=WHITE, outline=3, outline_color=BLACK, bg_music=None,
-                 hide_all_without=list(), show_all_without=list()):
+                 hide_all_without=list(), show_all_without=list(), bind_escape=True):
         if not isinstance(master, Window):
             raise TypeError(f"master must be a Window instance, not {master.__class__.__name__}")
         Window.__init__(self, master=master, bg_music=bg_music or master.bg_music)
@@ -23,17 +23,19 @@ class Dialog(Window):
         self.__hide_all_without = list(hide_all_without)
         self.__show_all_without = list(show_all_without)
         self.__hidden_objects_master = list(filter(lambda obj: not obj.is_shown(), self.__master.objects.drawable))
+        if bind_escape:
+            self.bind_key(pygame.K_ESCAPE, lambda event: self.stop())
 
     @property
     def frame(self) -> RectangleShape:
         return self.__frame
 
-    def mainloop(self) -> int:
+    def mainloop(self, **kwargs) -> int:
         if self.__hide_all_without:
             self.__master.hide_all(without=self.__hide_all_without)
         elif self.__show_all_without:
             self.__master.show_all(without=self.__show_all_without)
-        Window.mainloop(self)
+        Window.mainloop(self, **kwargs)
         self.__master.show_all(without=self.__hidden_objects_master)
         return 0
 

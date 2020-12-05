@@ -2,9 +2,7 @@
 
 import os.path
 import sys
-import configparser
 import pygame
-from typing import Any
 from my_pygame import Window, Dialog, Text, Button, ProgressBar, CrossShape, Clickable
 from my_pygame import WHITE, BLACK, BLUE, BLUE_LIGHT, CYAN, BLUE_DARK, TRANSPARENT, GREEN, YELLOW
 from my_pygame import threaded_function
@@ -72,9 +70,9 @@ class UpdaterWindow(Dialog):
         self.frame.animate_move(self, speed=20, at_every_frame=self.place_objects, midtop=self.midbottom)
         self.stop()
 
-    def stop(self, *args, **kwargs) -> None:
+    def stop(self, force=False, sound=None) -> None:
         if not self.__process_started:
-            super().stop(*args, **kwargs)
+            super().stop(force=force, sound=sound)
 
     def start(self, install=False):
         if not install:
@@ -109,7 +107,7 @@ class UpdaterWindow(Dialog):
 class SettingsWindow(Dialog):
 
     def __init__(self, master: Window):
-        super().__init__(master, width_ratio=1, height_ratio=1, outline=0, bg_color=master.bg_color)
+        super().__init__(master, width_ratio=1, height_ratio=1, outline=0, bg_color=master.bg_color, bind_escape=False)
         self.bind_key(pygame.K_ESCAPE, lambda event: self.animate_quit())
 
         self.text_title = Text("Settings", font=("calibri", 100), color=WHITE)

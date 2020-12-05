@@ -1,6 +1,6 @@
 # -*- coding: Utf-8 -*
 
-from typing import Union, Sequence, Callable
+from typing import Union, Sequence
 import pygame
 
 class Cursor:

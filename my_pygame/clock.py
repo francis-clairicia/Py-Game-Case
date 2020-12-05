@@ -2,7 +2,7 @@
 
 import pygame.time
 
-class Clock(object):
+class Clock:
 
     __slots__ = ("__time", "__clock")
 

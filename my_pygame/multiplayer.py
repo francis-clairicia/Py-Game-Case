@@ -12,18 +12,18 @@ STRUCT_FORMAT_PREFIX = ">I"
 STRUCT_FORMAT_SIZE = struct.calcsize(STRUCT_FORMAT_PREFIX)
 QUIT = "quit"
 
-def recv_data(socket: socket.socket) -> bytes:
+def recv_data(socket_obj: socket.socket) -> bytes:
     try:
-        recv_size = struct.unpack(STRUCT_FORMAT_PREFIX, socket.recv(STRUCT_FORMAT_SIZE))[0]
-        data = socket.recv(recv_size)
+        recv_size = struct.unpack(STRUCT_FORMAT_PREFIX, socket_obj.recv(STRUCT_FORMAT_SIZE))[0]
+        data = socket_obj.recv(recv_size)
     except:
         data = None
     return data
 
-def send_data(socket: socket.socket, data: bytes) -> None:
+def send_data(socket_obj: socket.socket, data: bytes) -> None:
     try:
         packed_data = struct.pack(STRUCT_FORMAT_PREFIX, len(data)) + data
-        socket.sendall(packed_data)
+        socket_obj.sendall(packed_data)
     except:
         pass
 
@@ -112,6 +112,7 @@ class ServerSocket:
             self.send_to_all_clients(msg, data, filter_function=lambda client: client != client_who_send)
 
     def __check_for_disconnected_clients(self, data_recieved: list[tuple[socket.socket, str, dict]]) -> None:
+        # pylint: disable=unused-variable
         for client_who_send, msg, data in data_recieved:
             if msg == QUIT:
                 print(f"{client_who_send.getpeername()} disconnected")

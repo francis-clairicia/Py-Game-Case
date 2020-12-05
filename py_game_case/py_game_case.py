@@ -2,7 +2,7 @@
 
 import sys
 import subprocess
-from typing import Callable, Sequence
+from typing import Callable
 import psutil
 import pygame
 from my_pygame import MainWindow, Window, Dialog, WindowTransition
@@ -111,7 +111,7 @@ class SettingsButton(Button):
 class SideBoard(Dialog):
 
     def __init__(self, master: Window):
-        super().__init__(master, width_ratio=0.25, height_ratio=1, outline=1, outline_color=WHITE, bg_color=BLUE)
+        super().__init__(master, width_ratio=0.25, height_ratio=1, outline=1, outline_color=WHITE, bg_color=BLUE, bind_escape=False)
         self.bind_key(pygame.K_ESCAPE, lambda event: self.animate_quit())
 
         self.text_title = Text("Options", font=("calibri", 50), color=WHITE)

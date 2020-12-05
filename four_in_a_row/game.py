@@ -5,7 +5,7 @@ from typing import Iterator, Sequence
 import pygame
 from my_pygame import Window, Dialog, Image, ImageButton, Button, Text, RectangleShape, CircleShape
 from my_pygame import ButtonListHorizontal, ButtonListVertical, DrawableListVertical, Clickable, Cursor
-from my_pygame import BLUE, WHITE, BLACK, GRAY_DARK, TRANSPARENT, YELLOW, RED, GREEN
+from my_pygame import BLUE, WHITE, GRAY_DARK, TRANSPARENT, YELLOW, RED, GREEN
 from .constants import RESOURCES, BACKGROUND_COLOR, NB_ROWS, NB_COLUMNS, AI, LOCAL_PLAYER, LAN_PLAYER
 from .ai import FourInARowAI
 
@@ -62,7 +62,7 @@ class ColumnGrid(Clickable, DrawableListVertical):
         return self.drawable
 
     def full(self) -> bool:
-        return (len(tuple(self.available_boxes)) == 0)
+        return len(tuple(self.available_boxes)) == 0
 
     def reset(self) -> None:
         for box in self.boxes:

@@ -1,8 +1,6 @@
 # -*- coding:Utf-8 -*
 
 import random
-import socket
-from math import sin, cos
 from typing import Sequence, Any
 import pygame
 from my_pygame import Window, WindowTransition
@@ -234,7 +232,7 @@ class WaitEnemy(Window):
 
 class NavySetup(Window):
     def __init__(self):
-        Window.__init__(self, bg_color=(0, 200, 255), bg_music=RESOURCES.MUSIC["setup"])
+        Window.__init__(self, bg_color=(0, 200, 255))
         self.gameplay = Gameplay()
         self.enemy_quit_window = EnemyQuitGame(self)
         self.transition = GameSetupTransition()

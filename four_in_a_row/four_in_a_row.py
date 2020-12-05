@@ -2,8 +2,8 @@
 
 import string
 import pygame
-from my_pygame import MainWindow, Window, Dialog, Image, ImageButton, Text, Button, ButtonListVertical, Entry, Form
-from my_pygame import BLUE, BLUE_LIGHT, BLUE_DARK, GRAY_LIGHT, WHITE, BLACK, YELLOW
+from my_pygame import MainWindow, Dialog, Image, ImageButton, Text, Button, ButtonListVertical, Entry, Form
+from my_pygame import BLUE, BLUE_DARK, GRAY_LIGHT, WHITE, BLACK, YELLOW
 from .constants import RESOURCES, WINDOW_CONFIG_FILE, BACKGROUND_COLOR, AI, LOCAL_PLAYER, LAN_PLAYER
 from .game import FourInARowGameplay
 from .ai import FourInARowAI

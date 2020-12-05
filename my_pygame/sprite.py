@@ -1,7 +1,6 @@
 # -*- coding: Utf-8 -*
 
 import itertools
-from typing import Union
 import pygame
 from .surface import create_surface
 from .drawable import Drawable

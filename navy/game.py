@@ -1,15 +1,13 @@
 # -*- coding: Utf-8 -*
 
-import socket
-import select
-import pickle
+import sys
 import random
 import json
 import pygame
 from typing import Sequence, Any, Union
 from my_pygame import Window, DrawableList, Grid
 from my_pygame import Image, ImageButton, Text, RectangleShape, Button, Sprite
-from my_pygame import GREEN, GREEN_DARK, GREEN_LIGHT, BLACK, WHITE, YELLOW, TRANSPARENT, RED, RED_DARK
+from my_pygame import GREEN, GREEN_DARK, WHITE, YELLOW, TRANSPARENT, RED, RED_DARK
 from my_pygame import ClientSocket
 from .constants import RESOURCES, NB_LINES_BOXES, NB_COLUMNS_BOXES, BOX_SIZE, NB_SHIPS
 
@@ -172,7 +170,7 @@ class Navy(Grid):
             ship.place_ship(list(filter(lambda box: box.pos in ship.boxes_pos, self.boxes)))
 
     def box_hit(self, box: NavyGridBox) -> bool:
-        return False
+        pass
 
     def set_box_hit(self, box: NavyGridBox, hit: bool) -> None:
         box.state = Button.DISABLED
@@ -218,15 +216,11 @@ class PlayerNavy(Navy):
                 self.set_box_hit(box, True)
                 attack_result["hit"] = True
                 if ship.destroyed():
-                    RESOURCES.play_sfx("destroy")
                     self.hit_all_boxes_around_ship(ship)
                     attack_result["ship_destroyed"] = ship.get_setup()
-                else:
-                    RESOURCES.play_sfx("explosion")
                 self.client_socket.send("attack_result", attack_result)
                 return True
         self.client_socket.send("attack_result", attack_result)
-        RESOURCES.play_sfx("splash")
         self.set_box_hit(box, False)
         return False
 
@@ -250,16 +244,12 @@ class OppositeNavy(Navy):
             if box in boxes_covered:
                 self.set_box_hit(box, True)
                 if all(box.state == Button.DISABLED for box in boxes_covered):
-                    RESOURCES.play_sfx("destroy")
                     ship = Ship(**ship_infos)
                     self.ai_setup.remove(ship_infos)
                     self.add_ship(ship)
                     self.hit_all_boxes_around_ship(ship)
-                else:
-                    RESOURCES.play_sfx("explosion")
                 return True
         self.set_box_hit(box, False)
-        RESOURCES.play_sfx("splash")
         return False
 
     def player_box_hit(self, box: NavyGridBox) -> bool:
@@ -271,15 +261,11 @@ class OppositeNavy(Navy):
             self.set_box_hit(box, True)
             if attack_result["ship_destroyed"] is not None:
                 ship_infos = attack_result["ship_destroyed"]
-                RESOURCES.play_sfx("destroy")
                 ship = Ship(**ship_infos)
                 self.add_ship(ship)
                 self.hit_all_boxes_around_ship(ship)
-            else:
-                RESOURCES.play_sfx("explosion")
             return True
         self.set_box_hit(box, False)
-        RESOURCES.play_sfx("splash")
         return False
 
     def show_all_non_destroyed_ships(self) -> Sequence[Ship]:
@@ -347,8 +333,7 @@ class AI:
                 potential_boxes.append((x, y))
         if not potential_boxes:
             print_navy_map(navy_map)
-            print(f"IndexError: {e}")
-            exit(1)
+            sys.exit(1)
         return random.choice(potential_boxes)
 
     def find_ship(self, navy_map: dict[tuple[int, int], int], line: int, column: int) -> tuple[int, int]:
@@ -364,13 +349,12 @@ class AI:
                 potential_boxes.append(pos)
         if not potential_boxes:
             print_navy_map(navy_map, higlight_box=(line, column))
-            print(f"IndexError: {e}")
-            exit(1)
+            sys.exit(1)
         return random.choice(potential_boxes)
 
 class FinishWindow(Window):
     def __init__(self, master):
-        Window.__init__(self, master=master, bg_music=None)
+        Window.__init__(self, master=master)
         self.master = master
         self.bg = RectangleShape(self.width, self.height, (0, 0, 0, 170))
         self.frame = RectangleShape(0.5 * self.width, 0.5 * self.height, GREEN_DARK, outline=2)
@@ -383,7 +367,6 @@ class FinishWindow(Window):
 
     def start(self, victory: bool) -> None:
         self.victory = victory
-        self.bg_music = None if victory is None else RESOURCES.MUSIC["end"]
         if victory is not None:
             self.text_finish.message = "{winner} won".format(winner="You" if victory else "Enemy")
         else:
@@ -422,7 +405,7 @@ class FinishWindow(Window):
 
 class Gameplay(Window):
     def __init__(self):
-        Window.__init__(self, bg_color=(0, 200, 255), bg_music=RESOURCES.MUSIC["gameplay"])
+        Window.__init__(self, bg_color=(0, 200, 255))
         self.player_id = 0
         self.button_back = ImageButton(self, RESOURCES.IMG["arrow_blue"], rotate=180, size=50, callback=self.stop, highlight_color=YELLOW)
         self.player_grid = PlayerNavy(self, self.client_socket)

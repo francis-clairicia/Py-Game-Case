@@ -10,5 +10,5 @@ def threaded_function(function):
         thread = Thread(target=function, args=args, kwargs=kwargs, daemon=True)
         thread.start()
         return thread
-    
+
     return wrapper

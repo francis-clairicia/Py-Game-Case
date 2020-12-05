@@ -13,6 +13,7 @@ class CheckBox(Clickable, RectangleShape, use_parent_theme=False):
                  outline=2, img: Optional[Image] = None, callback: Optional[Callable[..., Any]] = None,
                  highlight_color=BLUE, highlight_thickness=2, state="normal", cursor=None, disabled_cursor=None,
                  hover_sound=None, on_click_sound=None, disabled_sound=None, theme=None, **kwargs):
+        # pylint: disable=unused-argument
         RectangleShape.__init__(self, width, height, color=color, outline=outline, **kwargs)
         Clickable.__init__(
             self, master, self.change_value, state, highlight_color=highlight_color, highlight_thickness=highlight_thickness,

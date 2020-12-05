@@ -8,8 +8,29 @@ def get_all_parent_class(cls: type[object], do_not_search_for: Optional[Sequence
         if base not in do_not_search_for:
             yield from get_all_parent_class(base)
 
-_NAMESPACE = None
-_THEMES = {_NAMESPACE: dict()}
+class ThemeNamespace:
+
+    __NAMESPACE = None
+
+    def __init__(self, namespace: Any):
+        self.__namespace = namespace
+        self.__save_namespace = None
+
+    def __enter__(self):
+        self.__save_namespace = ThemeNamespace.__NAMESPACE
+        ThemeNamespace.__NAMESPACE = self.__namespace
+        if ThemeNamespace.__NAMESPACE not in _THEMES:
+            _THEMES[ThemeNamespace.__NAMESPACE] = dict()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        ThemeNamespace.__NAMESPACE = self.__save_namespace
+
+    @staticmethod
+    def get() -> Any:
+        return ThemeNamespace.__NAMESPACE
+
+_THEMES = {ThemeNamespace.get(): dict()}
 _HIDDEN_THEMES = dict()
 _DEFAULT_THEME = dict()
 _HIDDEN_DEFAULT_THEME = dict()
@@ -46,9 +67,9 @@ class ThemedObject(object, metaclass=MetaThemedObject):
     def set_theme(cls, name: str, options: dict[str, Any]) -> None:
         name = str(name)
         if not name.startswith("__"):
-            theme_dict = _THEMES[_NAMESPACE].get(cls)
+            theme_dict = _THEMES[ThemeNamespace.get()].get(cls)
             if theme_dict is None:
-                theme_dict = _THEMES[_NAMESPACE][cls] = dict()
+                theme_dict = _THEMES[ThemeNamespace.get()][cls] = dict()
         else:
             theme_dict = _HIDDEN_THEMES.get(cls)
             if theme_dict is None:
@@ -81,25 +102,7 @@ class ThemedObject(object, metaclass=MetaThemedObject):
         return theme_kwargs
 
     @staticmethod
-    def __get_theme_options(cls, theme: str) -> dict[str, Any]:
+    def __get_theme_options(class_obj, theme: str) -> dict[str, Any]:
         if theme.startswith("__"):
-            return _HIDDEN_THEMES.get(cls, dict()).get(theme, dict())
-        return _THEMES[_NAMESPACE].get(cls, dict()).get(theme, dict())
-
-class ThemeNamespace(object):
-
-    def __init__(self, namespace: Any):
-        self.__namespace = namespace
-        self.__save_namespace = None
-
-    def __enter__(self):
-        global _NAMESPACE
-        self.__save_namespace = _NAMESPACE
-        _NAMESPACE = self.__namespace
-        if _NAMESPACE not in _THEMES:
-            _THEMES[_NAMESPACE] = dict()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        global _NAMESPACE
-        _NAMESPACE = self.__save_namespace
+            return _HIDDEN_THEMES.get(class_obj, dict()).get(theme, dict())
+        return _THEMES[ThemeNamespace.get()].get(class_obj, dict()).get(theme, dict())

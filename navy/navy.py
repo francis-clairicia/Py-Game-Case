@@ -1,12 +1,8 @@
 # -*- coding: Utf-8 -*
 
-import socket
-import select
-import pygame
-from typing import Union
-from my_pygame import MainWindow, Window, RectangleShape, Image, Button, DrawableListVertical, ButtonListVertical, Form, Scale, Text, CountDown, Entry
+from my_pygame import MainWindow, Window, Image, Button, DrawableListVertical, ButtonListVertical, Form, Scale, Text, CountDown, Entry
 from my_pygame import Dialog
-from my_pygame import BLACK, GREEN, GREEN_DARK, GREEN_LIGHT, YELLOW, TRANSPARENT
+from my_pygame import GREEN, GREEN_DARK, GREEN_LIGHT, YELLOW, TRANSPARENT
 from .constants import RESOURCES, WINDOW_CONFIG_FILE
 from .navy_setup import NavySetup
 from .version import __version__
@@ -19,7 +15,6 @@ class Credits(Dialog):
         simple_font = ("calibri", 32)
         self.text = DrawableListVertical(offset=50)
         self.text.add(
-            Text("Backgroun musics and SFX\nby Eric Matyas: www.soundimage.org", font=simple_font, justify=Text.T_CENTER),
             Text("Images\ntaken in Google Image\n(except the logo)", font=simple_font, justify=Text.T_CENTER),
         )
         for text in self.text:
@@ -123,44 +118,9 @@ class PlayerClient(Dialog):
         self.start_game.start(2)
         self.stop()
 
-class Options(Dialog):
-
-    def __init__(self, master: Window, **kwargs):
-        Dialog.__init__(self, master=master, bg_color=GREEN_DARK, **kwargs)
-        self.text_title = Text("Options", font=("calibri", 50))
-        params_for_all_scales = {
-            "width": 0.45 * self.frame.w,
-            "height": 30,
-            "from_": 0,
-            "to": 1,
-        }
-        self.scale_music = Scale(
-            self, **params_for_all_scales,
-            callback=Window.set_music_volume
-        )
-        self.scale_music.show_label("Music: ", Scale.S_LEFT, font=Button.get_theme_options("option")["font"])
-        self.scale_music.show_percent(Scale.S_RIGHT, font=Button.get_theme_options("option")["font"])
-        self.scale_sound = Scale(
-            self, **params_for_all_scales,
-            callback=Window.set_sound_volume
-        )
-        self.scale_sound.show_label("SFX: ", Scale.S_LEFT, font=Button.get_theme_options("option")["font"])
-        self.scale_sound.show_percent(Scale.S_RIGHT, font=Button.get_theme_options("option")["font"])
-        self.button_cancel = Button(self, "Return to menu", theme="option", callback=self.stop)
-
-    def on_start_loop(self) -> None:
-        self.scale_music.value = Window.music_volume()
-        self.scale_sound.value = Window.sound_volume()
-
-    def place_objects(self) -> None:
-        self.text_title.move(centerx=self.frame.centerx, top=self.frame.top + 50)
-        self.scale_music.move(centerx=self.frame.centerx, bottom=self.frame.centery - 20)
-        self.scale_sound.move(centerx=self.frame.centerx, top=self.frame.centery + 20)
-        self.button_cancel.move(centerx=self.frame.centerx, bottom=self.frame.bottom - 10)
-
 class NavyWindow(MainWindow):
     def __init__(self):
-        MainWindow.__init__(self, title=f"Navy - v{__version__}", size=(1280, 720), bg_music=RESOURCES.MUSIC["menu"], resources=RESOURCES, config=WINDOW_CONFIG_FILE)
+        MainWindow.__init__(self, title=f"Navy - v{__version__}", size=(1280, 720), resources=RESOURCES, config=WINDOW_CONFIG_FILE)
 
         self.bg = Image(RESOURCES.IMG["menu_bg"], size=self.size)
         self.logo = Image(RESOURCES.IMG["logo"])
@@ -196,7 +156,6 @@ class NavyWindow(MainWindow):
         self.multiplayer_server = PlayerServer(self, **params_for_dialogs)
         self.multiplayer_client = PlayerClient(self, **params_for_dialogs)
         self.dialog_credits = Credits(self, **params_for_dialogs)
-        self.dialog_options = Options(self, **params_for_dialogs)
 
         self.menu_buttons = ButtonListVertical(offset=30)
         self.menu_buttons.add(
@@ -206,8 +165,7 @@ class NavyWindow(MainWindow):
             Button(self, "Quit", theme="title", callback=self.stop)
         )
 
-        self.button_credits = Button(self, "Credits", theme="title", callback=self.dialog_credits.mainloop)
-        self.button_settings = Button(self, theme="title", img=Image(RESOURCES.IMG["settings"], size=self.button_credits.height - 20), callback=self.dialog_options.mainloop)
+        self.button_credits = Button(self, "Credits", font=("calibri", 50), callback=self.dialog_credits.mainloop)
 
     def on_start_loop(self) -> None:
         self.disable_key_joy_focus_for_all_window()
@@ -221,5 +179,4 @@ class NavyWindow(MainWindow):
         self.bg.center = self.center
         self.logo.centerx = self.centerx
         self.menu_buttons.move(centerx=self.centerx, bottom=self.bottom - 20)
-        self.button_settings.move(left=10, bottom=self.bottom - 10)
         self.button_credits.move(right=self.right - 10, bottom=self.bottom - 10)
