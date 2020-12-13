@@ -173,8 +173,11 @@ class Updater:
                     self.__release_asset = asset
                     break
 
+    def has_a_downloaded_update(self) -> bool:
+        return os.path.isfile(self.__cache_file)
+
     def has_a_new_release(self) -> bool:
-        if os.path.isfile(self.__cache_file):
+        if self.has_a_downloaded_update():
             return True
         return bool(self.__has_a_release() and self.__latest_release.version > self.__actual_version)
 
@@ -183,7 +186,7 @@ class Updater:
         return bool(self.__latest_release.exists and isinstance(self.__release_asset, GitReleaseAsset))
 
     def install_latest_version(self, progress: ProgressBar, *, compare_versions=True) -> str:
-        if os.path.isfile(self.__cache_file):
+        if self.has_a_downloaded_update():
             archive = self.__cache_file
         else:
             if (not compare_versions and not self.__has_a_release()) or (compare_versions and not self.has_a_new_release()):

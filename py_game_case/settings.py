@@ -90,9 +90,10 @@ class UpdaterWindow(Dialog):
     @threaded_function
     def __start_install_thread(self, compare_versions=True) -> None:
         self.__process_started = True
+        self.__text.message = "Searching..."
+        self.__text.show()
         state = self.__updater.install_latest_version(self.__progress_bar, compare_versions=compare_versions)
         self.__text.message = Updater.get_message(state)
-        self.__text.show()
         if state == Updater.STATE_INSTALLED:
             self.__text.message += " Restarting..."
             self.after(500, self.__call_restart_process)

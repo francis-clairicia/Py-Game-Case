@@ -205,7 +205,8 @@ class PyGameCase(MainWindow):
         self.updater_window = UpdaterWindow(self, self.launcher_updater)
         self.side_board = SideBoard(self)
         self.side_board.add_option("Settings", self.settings_section.mainloop)
-        self.side_board.add_option("Update", lambda: self.updater_window.start(install=True))
+        if psutil.WINDOWS:
+            self.side_board.add_option("Update", lambda: self.updater_window.start(install=True))
 
         self.button_settings = SettingsButton(self, size=40, callback=self.side_board.mainloop)
         self.button_settings.force_use_highlight_thickness(True)
@@ -243,11 +244,12 @@ class PyGameCase(MainWindow):
         default_logo_width = self.logo.width
         self.logo.load(RESOURCES.IMG["logo"])
         self.logo.midtop = self.midbottom
-        if SETTINGS.auto_check_update and self.launcher_updater.has_a_new_release():
-            self.logo.animate_move(self, speed=20, top=0, centerx=self.centerx)
-            self.updater_window.start()
-            if not self.loop:
-                return
+        if psutil.WINDOWS:
+            if self.launcher_updater.has_a_downloaded_update() or (SETTINGS.auto_check_update and self.launcher_updater.has_a_new_release()):
+                self.logo.animate_move(self, speed=20, top=0, centerx=self.centerx)
+                self.updater_window.start()
+                if not self.loop:
+                    return
         self.logo.animate_move(self, speed=20, midbottom=self.center)
         loading = ProgressBar(
             default_logo_width, 40, TRANSPARENT, GREEN,

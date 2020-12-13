@@ -56,7 +56,7 @@ class ResourcesCompiler:
     @staticmethod
     def compile(path: str, *, delete=False) -> None:
         #pylint: disable=unused-variable
-        path = str(path).replace("/", "\\")
+        path = str(path)
         print()
         if os.path.isfile(path):
             ResourcesCompiler.__compile_file(path, delete)
@@ -69,8 +69,8 @@ class ResourcesCompiler:
     def __compile_file(path: str, delete: bool) -> None:
         path_without_extension, extension = os.path.splitext(path)
         if extension in ResourcesCompiler.__IMG_EXT:
-            compiled_img_path = path_without_extension + ResourcesCompiler.__COMPILED_IMG_EXT
-            print("->", path, "compiled to", compiled_img_path)
+            compiled_img_path = str(path_without_extension + ResourcesCompiler.__COMPILED_IMG_EXT)
+            print("->", path.replace("\\", "/"), "compiled to", compiled_img_path.replace("\\", "/"))
             surface = pygame.image.load(path)
             file_format = "RGBA"
             buffer_dict = {

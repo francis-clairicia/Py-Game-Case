@@ -24,7 +24,8 @@ def zip_compress():
     if sys.platform.startswith("win"):
         pattern_list.extend(["python*.dll", "vcruntime*.dll"])
     if output_folder != ".":
-        ResourcesCompiler.compile(output_folder, delete=True)
+        for include in options["include_files"]:
+            ResourcesCompiler.compile(os.path.join(output_folder, include), delete=True)
     for pattern in pattern_list:
         pattern = os.path.join(output_folder, pattern)
         for path in glob.glob(pattern):

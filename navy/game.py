@@ -422,6 +422,7 @@ class Gameplay(Window):
         self.player_grid.load_setup(navy_setup)
         self.opposite_grid.ai_setup = ai_setup or list()
         self.turn_checker.turn = self.get_default_turn()
+        self.opposite_grid.set_box_clickable(self.turn_checker.turn)
         self.game_finished = self.restart = False
         self.ai.reset()
         self.mainloop()
