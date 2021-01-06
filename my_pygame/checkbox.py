@@ -41,8 +41,8 @@ class CheckBox(Clickable, RectangleShape, use_parent_theme=False):
         if callable(self.__on_changed_value):
             self.__on_changed_value(self.__value)
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
-        RectangleShape.after_drawing(self, surface)
+    def _after_drawing(self, surface: pygame.Surface) -> None:
+        RectangleShape._after_drawing(self, surface)
         if self.value == self.__on_value:
             if isinstance(self.__active_img, Image):
                 self.__active_img.center = self.center

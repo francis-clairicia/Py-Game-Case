@@ -320,8 +320,6 @@ class NavySetup(Window):
             self.count_down.stop()
             self.client_socket.send("ready")
             WaitEnemy(self).mainloop()
-            if not self.loop:
-                return
         self.gameplay.start(self.create_setup(), ai_setup=ai_setup)
         self.reinit_all_ships()
         if self.gameplay.restart:

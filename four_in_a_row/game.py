@@ -4,10 +4,15 @@ import random
 from typing import Iterator, Sequence
 import pygame
 from my_pygame import Window, Dialog, Image, ImageButton, Button, Text, RectangleShape, CircleShape
-from my_pygame import ButtonListHorizontal, ButtonListVertical, DrawableListVertical, Clickable, Cursor
+from my_pygame import ButtonListHorizontal, ButtonListVertical, DrawableListVertical, Grid, Clickable, Cursor
 from my_pygame import BLUE, WHITE, GRAY_DARK, TRANSPARENT, YELLOW, RED, GREEN
 from .constants import RESOURCES, BACKGROUND_COLOR, NB_ROWS, NB_COLUMNS, AI, LOCAL_PLAYER, LAN_PLAYER
 from .ai import FourInARowAI
+
+PLAYER_TOKEN_COLOR = {
+    1: RED,
+    2: YELLOW
+}
 
 class CircleBox(RectangleShape):
 
@@ -24,8 +29,8 @@ class CircleBox(RectangleShape):
     def circle(self) -> CircleShape:
         return self.__circle
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
-        RectangleShape.after_drawing(self, surface)
+    def _after_drawing(self, surface: pygame.Surface) -> None:
+        RectangleShape._after_drawing(self, surface)
         self.__circle.center = self.center
         if self.value != 0:
             self.__circle.outline = 1
@@ -38,7 +43,7 @@ class CircleBox(RectangleShape):
 
     @value.setter
     def value(self, value: int) -> None:
-        self.__circle.color = {0: self.__default_circle_color, 1: RED, 2: YELLOW}[value]
+        self.__circle.color = {0: self.__default_circle_color, **PLAYER_TOKEN_COLOR}[value]
         self.__value = value
 
     row = property(lambda self: self.__row)
@@ -114,7 +119,7 @@ class FourInARowGrid(ButtonListHorizontal):
     def map(self) -> dict[tuple[int, int], int]:
         return {(box.row, box.col): box.value for column in self.columns for box in column.boxes}
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
+    def _after_drawing(self, surface: pygame.Surface) -> None:
         pygame.draw.rect(surface, WHITE, self.rect, width=2)
 
     def reset(self) -> None:
@@ -131,7 +136,7 @@ class FourInARowGrid(ButtonListHorizontal):
         row = 0
         while grid.get((row + 1, column), -1) == 0:
             column_object.boxes[row].value = player
-            self.master.draw_and_refresh(rect=column_object.rect)
+            self.master.draw_and_refresh()
             pygame.time.wait(35)
             column_object.boxes[row].value = 0
             row += 1
@@ -190,6 +195,13 @@ class FourInARowGameplay(Window):
         self.text_winner = Text()
         self.text_drawn_match = Text("Drawn match.")
 
+        self.token_players = Grid(self)
+        for row in range(2):
+            self.token_players.place(
+                CircleShape(20, PLAYER_TOKEN_COLOR[row + 1], outline=2, outline_color=WHITE),
+                row, column=1, padx=5, pady=5, justify="left"
+            )
+
         self.enemy_quit_dialog = EnemyQuitGame(self)
 
     def start(self, enemy: str, player=1, player_name=None, enemy_name=None, ai_level=None) -> None:
@@ -215,6 +227,11 @@ class FourInARowGameplay(Window):
             }
             if self.enemy == AI:
                 self.ai.level = ai_level
+        for row, name in enumerate(self.__turn_dict.values()):
+            self.token_players.place(
+                Text(name + ":", **self.text_winner.get_used_theme_options()),
+                row, column=0, padx=5, pady=5, justify="right"
+            )
         self.mainloop()
 
     def on_start_loop(self) -> None:
@@ -264,6 +281,7 @@ class FourInARowGameplay(Window):
         self.text_player_turn.move(left=self.text_score.left, top=self.text_score.bottom + 50)
         self.left_options.move(centerx=(self.left + self.grid.left) // 2, top=self.text_player_turn.bottom + 50)
         self.text_winner.center = ((self.grid.right + self.right) // 2, self.grid.centery)
+        self.token_players.move(centerx=self.text_winner.centerx, top=self.grid.top)
         self.text_drawn_match.center = self.text_winner.center
 
     def set_grid(self) -> None:

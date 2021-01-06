@@ -125,8 +125,8 @@ class Button(Clickable, RectangleShape, use_parent_theme=False):
             height = self.__text.h + self.__y_add_size if self.__y_size is None else self.__y_size
             RectangleShape.set_size(self, width, height)
 
-    def focus_drawing(self, surface: pygame.Surface) -> None:
-        Clickable.focus_drawing(self, surface)
+    def _focus_drawing(self, surface: pygame.Surface) -> None:
+        Clickable._focus_drawing(self, surface)
         self.__text.move(**{self.__justify_x: getattr(self, self.__justify_x), self.__justify_y: getattr(self, self.__justify_y)})
         self.__text.move_ip(*self.__offset)
         if self.hover:

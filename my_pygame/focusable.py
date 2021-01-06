@@ -60,7 +60,7 @@ class Focusable(ThemedObject):
             if side in self.__side:
                 self.__side[side] = None
 
-    def focus_drawing(self, surface: pygame.Surface) -> None:
+    def _focus_drawing(self, surface: pygame.Surface) -> None:
         if not self.__draw_focus_outline.get(self.__class__, True) or not self.has_focus():
             return
         if hasattr(self, "rect"):

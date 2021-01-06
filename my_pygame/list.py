@@ -25,6 +25,10 @@ class DrawableList:
     def __contains__(self, value: Any) -> bool:
         return bool(value in self.__list)
 
+    @staticmethod
+    def get_valid_classes() -> tuple[type]:
+        return (Drawable, DrawableList)
+
     @property
     def rect(self) -> pygame.Rect:
         left = min((obj.left for obj in self.__list), default=0)
@@ -48,7 +52,7 @@ class DrawableList:
 
     def add_multiple(self, iterable_of_objects: Iterable[Drawable]) -> None:
         for obj in iterable_of_objects:
-            if isinstance(obj, (Drawable, DrawableList)) and obj not in self.__list:
+            if isinstance(obj, self.get_valid_classes()) and obj not in self.__list:
                 self.__list.append(obj)
 
     def remove(self, *obj_list: Drawable) -> None:
@@ -75,19 +79,19 @@ class DrawableList:
 
     def draw(self, surface: pygame.Surface) -> None:
         if self.is_shown() and self.__draw:
-            self.before_drawing(surface)
+            self._before_drawing(surface)
             if self.__bg_color and self.__bg_color != TRANSPARENT:
                 pygame.draw.rect(surface, self.__bg_color, self.rect)
             for obj in self.__list:
                 if isinstance(obj, Focusable):
                     obj.focus_update()
                 obj.draw(surface)
-            self.after_drawing(surface)
+            self._after_drawing(surface)
 
-    def before_drawing(self, surface: pygame.Surface) -> None:
+    def _before_drawing(self, surface: pygame.Surface) -> None:
         pass
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
+    def _after_drawing(self, surface: pygame.Surface) -> None:
         pass
 
     def update(self, *args, **kwargs) -> None:

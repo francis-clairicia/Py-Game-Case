@@ -94,9 +94,8 @@ class PolygonShape(Shape):
         self.__image_points = [Vector2(self.width * x, self.height * y) for x, y in self.__image_points_percent]
         if len(self.points) > 2:
             pygame.draw.polygon(self.image, self.color, self.__image_points)
-        self.mask_update()
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
+    def _after_drawing(self, surface: pygame.Surface) -> None:
         if self.outline > 0:
             if len(self.points) > 2:
                 pygame.draw.polygon(surface, self.outline_color, self.points, width=self.outline)
@@ -137,9 +136,8 @@ class RectangleShape(Shape):
     def shape_update(self) -> None:
         self.image = create_surface(self.size)
         pygame.draw.rect(self.image, self.color, self.image.get_rect(), **self.__draw_params)
-        self.mask_update()
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
+    def _after_drawing(self, surface: pygame.Surface) -> None:
         if self.outline > 0:
             pygame.draw.rect(surface, self.outline_color, self.rect, width=self.outline, **self.__draw_params)
 
@@ -198,9 +196,8 @@ class CircleShape(Shape):
         self.__radius = min(self.width // 2, self.height // 2)
         self.image = create_surface(self.size)
         pygame.draw.circle(self.image, self.color, (self.radius, self.radius), self.radius, **self.__draw_params)
-        self.mask_update()
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
+    def _after_drawing(self, surface: pygame.Surface) -> None:
         if self.outline > 0:
             pygame.draw.circle(surface, self.outline_color, self.center, self.radius, width=self.outline, **self.__draw_params)
 
@@ -253,7 +250,6 @@ class CrossShape(Shape):
             image_rect = self.image.get_rect()
             pygame.draw.line(self.image, self.outline_color, image_rect.topleft, image_rect.bottomright, width=self.outline)
             pygame.draw.line(self.image, self.outline_color, image_rect.topright, image_rect.bottomleft, width=self.outline)
-            self.mask_update()
         except:
             pass
 

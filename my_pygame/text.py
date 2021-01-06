@@ -157,7 +157,7 @@ class Text(Drawable, use_parent_theme=False):
         if self.__shadow_surface:
             self.__shadow_surface.config(**config_for_shadow)
 
-    def before_drawing(self, surface: pygame.Surface) -> None:
+    def _before_drawing(self, surface: pygame.Surface) -> None:
         if self.__shadow_surface and self.__shadow_surface.is_shown():
             self.__shadow_surface.move(x=self.x + self.shadow[0], y=self.y + self.shadow[1])
             self.__shadow_surface.draw(surface)

@@ -35,14 +35,14 @@ class ProgressBar(RectangleShape):
         self.hide_label()
         self.hide_value()
 
-    def before_drawing(self, surface: pygame.Surface) -> None:
-        RectangleShape.before_drawing(self, surface)
+    def _before_drawing(self, surface: pygame.Surface) -> None:
+        RectangleShape._before_drawing(self, surface)
         self.__scale_rect.set_size(self.width * self.percent, self.height, smooth=False)
         self.__outline_rect.set_size(self.size, smooth=False)
         self.__outline_rect.midleft = self.__scale_rect.midleft = self.midleft
         self.__scale_rect.draw(surface)
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
+    def _after_drawing(self, surface: pygame.Surface) -> None:
         self.__outline_rect.draw(surface)
         offset = 10
         if self.__value_text.is_shown() and self.__value_text_type in ["value", "percent"]:

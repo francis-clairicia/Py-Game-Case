@@ -7,7 +7,7 @@ import psutil
 import pygame
 from my_pygame import MainWindow, Window, Dialog, WindowTransition
 from my_pygame import Image, Text, ProgressBar, Button, Sprite, RectangleShape, HorizontalGradientShape
-from my_pygame import ButtonListVertical, DrawableListHorizontal
+from my_pygame import ButtonListVertical, DrawableListHorizontal, SpriteDict
 from my_pygame import TRANSPARENT, WHITE, BLACK, YELLOW, GREEN, BLUE
 from my_pygame import set_color_alpha, change_brightness
 from my_pygame import ThemeNamespace, threaded_function
@@ -80,7 +80,7 @@ class TitleButton(Button):
         self.focus_on_hover(True)
         self.__on_hover = on_hover
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
+    def _after_drawing(self, surface: pygame.Surface) -> None:
         pygame.draw.line(surface, self.outline_color, self.topleft, self.topright, width=self.outline)
         pygame.draw.line(surface, self.outline_color, self.bottomleft, self.bottomright, width=self.outline)
 
@@ -103,17 +103,19 @@ class SettingsButton(Button):
     def color(self, color: pygame.Color) -> None:
         self.outline_color = color
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
+    def _after_drawing(self, surface: pygame.Surface) -> None:
         pygame.draw.line(surface, self.outline_color, self.topleft, self.topright, width=self.outline)
         pygame.draw.line(surface, self.outline_color, self.midleft, self.midright, width=self.outline)
         pygame.draw.line(surface, self.outline_color, self.bottomleft, self.bottomright, width=self.outline)
 
 class SideBoard(Dialog):
 
-    def __init__(self, master: Window):
+    def __init__(self, master):
         super().__init__(master, width_ratio=0.25, height_ratio=1, outline=1, outline_color=WHITE, bg_color=BLUE, bind_escape=False)
         self.bind_key(pygame.K_ESCAPE, lambda event: self.animate_quit())
+        self.bind_event(pygame.MOUSEBUTTONDOWN, self.__handle_mouse_event)
 
+        self.master = master
         self.text_title = Text("Options", font=("calibri", 50), color=WHITE)
         self.button_list = ButtonListVertical(offset=20, justify="right")
 
@@ -130,6 +132,8 @@ class SideBoard(Dialog):
 
     def on_start_loop(self) -> None:
         self.frame.left = self.right
+        self.place_objects()
+        self.master.image_game_preview.animate_move(self, speed=75, right=self.left)
         self.frame.animate_move(self, speed=50, at_every_frame=self.place_objects, right=self.right)
 
     def animate_quit(self) -> None:
@@ -140,12 +144,16 @@ class SideBoard(Dialog):
         self.animate_quit()
         callback()
 
+    def __handle_mouse_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not self.frame.rect.collidepoint(*event.pos):
+            self.animate_quit()
+
 class PyGameCase(MainWindow):
 
     RUNNING_STATE_SUFFIX = " - Running"
 
     def __init__(self):
-        super().__init__(title=f"Py-Game-Case - v{__version__}", size=(1280, 720), bg_color=(0, 0, 100), resources=RESOURCES)
+        super().__init__(title=f"Py-Game-Case - v{__version__}", size=(1280, 720), flags=pygame.RESIZABLE, bg_color=(0, 0, 100), resources=RESOURCES)
 
         TitleButton.set_default_theme("default")
         TitleButton.set_theme("default", {
@@ -176,7 +184,7 @@ class PyGameCase(MainWindow):
 
         self.launcher_updater = Updater(__version__)
 
-        self.image_game_preview = Sprite()
+        self.image_game_preview = SpriteDict()
         self.bg = DrawableListHorizontal()
         left_color = BLACK
         right_color = set_color_alpha(BLACK, 60)
@@ -195,7 +203,7 @@ class PyGameCase(MainWindow):
                 self, lambda game_id=game_id: self.show_preview(game_id), text=game_infos["name"],
                 callback=lambda game_id=game_id: self.launch_game(game_id)
             )
-            self.image_game_preview.add_sprite(game_id, RESOURCES.IMG[game_id], height=self.height)
+            self.image_game_preview[game_id] = Sprite(RESOURCES.IMG[game_id], height=self.height)
             self.buttons_game_dict[game_id] = button
         self.buttons_game_launch.add_multiple(self.buttons_game_dict.values())
         self.game_id = None
@@ -217,7 +225,7 @@ class PyGameCase(MainWindow):
         self.bg.center = self.center
         self.logo.move(left=10, top=10)
         self.buttons_game_launch.move(left=10, top=self.logo.bottom + 50)
-        self.image_game_preview.midright = self.midright
+        self.image_game_preview.midright = self.midleft
         self.button_settings.move(right=self.right - 20, top=20)
 
     def set_grid(self) -> None:
@@ -235,10 +243,10 @@ class PyGameCase(MainWindow):
             self.stop(force=True)
 
     def on_start_loop(self):
-        self.image_game_preview.right = self.left
+        self.image_game_preview.move(right=self.left, top=self.top)
         save_objects_center = list()
-        for obj in self.objects.drawable:
-            save_objects_center.append((obj, obj.center))
+        for obj in [self.logo, *self.buttons_game_dict.values(), self.button_settings]:
+            save_objects_center.append((obj, obj.get_move()))
         self.buttons_game_launch.right = self.left
         self.button_settings.left = self.right
         default_logo_width = self.logo.width
@@ -248,8 +256,6 @@ class PyGameCase(MainWindow):
             if self.launcher_updater.has_a_downloaded_update() or (SETTINGS.auto_check_update and self.launcher_updater.has_a_new_release()):
                 self.logo.animate_move(self, speed=20, top=0, centerx=self.centerx)
                 self.updater_window.start()
-                if not self.loop:
-                    return
         self.logo.animate_move(self, speed=20, midbottom=self.center)
         loading = ProgressBar(
             default_logo_width, 40, TRANSPARENT, GREEN,
@@ -262,18 +268,16 @@ class PyGameCase(MainWindow):
         self.objects.set_priority(loading, 0, relative_to=self.logo)
         loading.animate_move(self, speed=10, centerx=loading.centerx, top=self.logo.bottom + 20)
         thread = self.__init_games()
-        while self.loop and (thread.is_alive() or loading.percent < 1):
-            self.main_clock.tick(self.get_fps())
+        while thread.is_alive() or loading.percent < 1:
+            self.handle_fps()
             loading.value = len(self.window_game_dict)
             self.draw_and_refresh(pump=True)
-        if not self.loop:
-            return
         pygame.time.wait(100)
         loading.animate_move(self, speed=10, center=self.logo.center)
         self.objects.remove(loading)
-        self.logo.animation.rotate(angle=360, offset=5, point=self.logo.center).scale_width(width=default_logo_width, offset=7).start(self)
-        for obj, center in save_objects_center:
-            obj.animate_move(self, speed=20, center=center)
+        self.logo.animation.rotate(angle=360, offset=5, point="center").scale_width(width=default_logo_width, offset=7).start(self)
+        for obj, move in save_objects_center:
+            obj.animate_move(self, speed=20, **move)
         self.focus_mode(Button.MODE_KEY)
         pygame.event.clear()
 
@@ -285,10 +289,10 @@ class PyGameCase(MainWindow):
             for process in self.game_launched_processes.check_for_terminated_games():
                 self.buttons_game_dict[process.game_id].text = GAMES[process.game_id]["name"]
                 self.buttons_game_dict[process.game_id].state = Button.NORMAL
-            if not self.game_launched_processes and not pygame.display.get_active():
-                pass
+            # if not self.game_launched_processes and not pygame.display.get_active():
+            #     pass
         if all(not button.has_focus() and not button.hover for button in self.buttons_game_launch) and self.game_id is not None:
-            self.image_game_preview.animate_move(self, speed=75, right=self.left)
+            self.image_game_preview.animate_move_in_background(self, speed=75, right=self.left)
             self.game_id = None
 
     def show_preview(self, game_id: str) -> None:
@@ -298,7 +302,7 @@ class PyGameCase(MainWindow):
         self.image_game_preview.animate_move_in_background(self, speed=75, right=self.left, after_animation=self.__show_preview)
 
     def __show_preview(self) -> None:
-        self.image_game_preview.set_sprite(self.game_id)
+        self.image_game_preview.use_sprite(self.game_id)
         self.image_game_preview.animate_move_in_background(self, speed=75, right=self.right)
 
     def launch_game(self, game_id: str) -> None:
@@ -309,9 +313,9 @@ class PyGameCase(MainWindow):
             self.iconify()
         else:
             self.game_id = game_id
-            if self.image_game_preview.get_actual_sprite_list_name() != game_id:
+            if self.image_game_preview.get_actual_sprite_name() != game_id:
                 self.image_game_preview.animate_move(self, speed=75, right=self.left)
-            self.image_game_preview.set_sprite(game_id)
+            self.image_game_preview.use_sprite(game_id)
             self.image_game_preview.animate_move(self, speed=75, right=self.right)
             window = self.window_game_dict[game_id]
             window.mainloop(transition=self.transition)

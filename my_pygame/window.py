@@ -4,6 +4,7 @@ import os
 import sys
 import configparser
 from typing import Callable, Any, Union, Optional, Sequence
+from contextlib import contextmanager
 import pygame
 from .drawable import Drawable
 from .focusable import Focusable
@@ -26,15 +27,17 @@ def set_value_in_range(value: float, min_value: float, max_value: float) -> floa
         value = max_value
     return value
 
-class WindowCallback(object):
+class WindowExit(BaseException):
+    pass
+
+class WindowCallback:
     def __init__(self, master, wait_time: float, callback: Callable[..., Any], args: tuple[Any, ...], kwargs: dict[str, Any]):
         self.__master = master
         self.__wait_time = wait_time
         self.__callback = callback
         self.__args = args
         self.__kwargs = kwargs
-        self.__clock = Clock()
-        self.__clock.restart()
+        self.__clock = Clock(start=True)
 
     def __call__(self):
         if self.__clock.elapsed_time(self.__wait_time, restart=False):
@@ -151,7 +154,7 @@ class WindowTransition:
     def show_previous_window_end_loop(self, window) -> None:
         pass
 
-class Window(object):
+class Window:
 
     MIXER_FREQUENCY = 44100
     MIXER_SIZE = -16
@@ -159,6 +162,7 @@ class Window(object):
     MIXER_BUFFER = 512
 
     __main_window = None
+    __fake_screen = pygame.Surface((0, 0))
     __resources = Resources()
     __default_key_repeat = (0, 0)
     __text_input_enabled = False
@@ -192,6 +196,7 @@ class Window(object):
         self.__loop = False
         self.__show_fps_in_this_window = True
         self.__objects = WindowDrawableList()
+        self.__automatic_add_drawable_to_object_list = True
         self.__event_handler_dict = dict()
         self.__key_handler_dict = dict()
         self.__key_state_dict = dict()
@@ -199,7 +204,6 @@ class Window(object):
         self.__joystick_state_dict = dict()
         self.__mouse_handler_list = list()
         self.__callback_after = WindowCallbackList()
-        self.rect_to_update = None
         self.bg_color = bg_color
         self.bg_music = bg_music
         focus_event = (
@@ -229,10 +233,6 @@ class Window(object):
         return Window.__actual_looping_window
 
     @property
-    def main_clock(self) -> pygame.time.Clock:
-        return self.__main_clock
-
-    @property
     def joystick(self) -> JoystickList:
         return Window.__joystick
 
@@ -245,21 +245,30 @@ class Window(object):
         return self.__objects
 
     def __setattr__(self, name, obj) -> None:
-        if name != "_Window__objects" and hasattr(self, "_Window__objects"):
-            if hasattr(self, name) and isinstance(getattr(self, name), (Drawable, DrawableList)):
+        automatic_add = getattr(self, "_Window__automatic_add_drawable_to_object_list", True)
+        if name != "_Window__objects" and hasattr(self, "_Window__objects") and automatic_add:
+            if hasattr(self, name) and isinstance(getattr(self, name), DrawableList.get_valid_classes()):
                 self.objects.remove(getattr(self, name))
-            if isinstance(obj, (Drawable, DrawableList)) and not isinstance(obj, (WindowDrawable, WindowDrawableList)):
+            if isinstance(obj, DrawableList.get_valid_classes()) and not isinstance(obj, (WindowDrawable, WindowDrawableList)):
                 self.objects.add(obj)
         return object.__setattr__(self, name, obj)
 
     def __delattr__(self, name) -> None:
         obj = getattr(self, name)
-        if isinstance(obj, (Drawable, DrawableList)) and name != "_Window__objects":
+        if isinstance(obj, DrawableList.get_valid_classes()) and name != "_Window__objects":
             self.objects.remove(obj)
         return object.__delattr__(self, name)
 
     def __contains__(self, obj) -> bool:
         return bool(obj in self.objects)
+
+    @contextmanager
+    def no_add_object_automatically(self) -> None:
+        try:
+            self.__automatic_add_drawable_to_object_list = False
+            yield self
+        finally:
+            self.__automatic_add_drawable_to_object_list = True
 
     def enable_key_joy_focus(self) -> None:
         self.__key_enabled = True
@@ -323,12 +332,11 @@ class Window(object):
             action_before_loop()
         self.place_objects()
         self.set_grid()
-        self.__fps_update()
         self.on_start_loop()
         if isinstance(transition, WindowTransition) and self.__loop:
             transition.show_new_looping_window(self)
         while self.__loop:
-            self.__main_clock.tick(Window.__fps)
+            self.handle_fps()
             Window.__actual_looping_window = self
             self.__handle_bg_music()
             self.__handle_cursor()
@@ -370,6 +378,7 @@ class Window(object):
         if not Window.__all_opened and pygame.get_init():
             Window.stop_connection()
             pygame.quit()
+            raise WindowExit
 
     def close(self) -> None:
         self.stop(force=True)
@@ -401,14 +410,23 @@ class Window(object):
             self.__screenshot.draw(self.surface)
             pygame.draw.rect(self.surface, WHITE, self.__screenshot.rect, width=3)
 
-    def refresh(self, rect=None, pump=False) -> None:
-        pygame.display.update(rect or self.rect_to_update or self.rect)
+    def refresh(self, pump=False) -> None:
+        screen = pygame.display.get_surface()
+        screen.blit(pygame.transform.smoothscale(self.surface, screen.get_size()), (0, 0))
+        pygame.display.flip()
         if pump:
-            pygame.event.pump()
+            repost_event = list[pygame.event.Event]()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.close()
+                else:
+                    repost_event.append(event)
+            for event in repost_event:
+                pygame.event.post(event)
 
-    def draw_and_refresh(self, show_fps=True, rect=None, pump=False) -> None:
+    def draw_and_refresh(self, show_fps=True, pump=False) -> None:
         self.draw_screen(show_fps=show_fps)
-        self.refresh(rect=rect, pump=pump)
+        self.refresh(pump=pump)
 
     @staticmethod
     def set_fps(framerate: int) -> None:
@@ -419,8 +437,10 @@ class Window(object):
         return Window.__fps
 
     @staticmethod
-    def show_fps(status: bool) -> None:
+    def show_fps(status: bool, **kwargs) -> None:
         Window.__show_fps = bool(status)
+        if kwargs:
+            Window.move_fps_object(**kwargs)
 
     @staticmethod
     def config_fps_obj(**kwargs) -> None:
@@ -434,10 +454,10 @@ class Window(object):
     def fps_is_shown() -> bool:
         return Window.__show_fps
 
-    def __fps_update(self) -> None:
+    def handle_fps(self) -> None:
+        self.__main_clock.tick(Window.__fps)
         if Window.__show_fps:
             Window.__fps_obj.message = f"{round(self.__main_clock.get_fps())} FPS"
-        self.after(500, self.__fps_update)
 
     def show_fps_in_this_window(self, status: bool) -> None:
         self.__show_fps_in_this_window = bool(status)
@@ -459,9 +479,10 @@ class Window(object):
             for key_value, callback_list in key_state_dict.items():
                 for callback in callback_list:
                     callback(key_value, self.keyboard.is_pressed(key_value))
+        mouse_pos = self.map_cursor_position(pygame.mouse.get_pos())
         for mouse_handler_list in [Window.__all_window_mouse_handler_list, self.__mouse_handler_list]:
             for callback in mouse_handler_list:
-                callback(pygame.mouse.get_pos())
+                callback(mouse_pos)
         for joystick_state_dict in [Window.__all_window_joystick_state_dict, self.__joystick_state_dict]:
             for device_index in filter(lambda index: self.joystick[index] is not None, joystick_state_dict):
                 for action, callback_list in joystick_state_dict[device_index].items():
@@ -470,7 +491,8 @@ class Window(object):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.close()
-                return
+            for attr in filter(lambda attr: hasattr(event, attr), ["pos", "rel"]):
+                setattr(event, attr, self.map_cursor_position(getattr(event, attr)))
             for event_handler_dict in [Window.__all_window_event_handler_dict, self.__event_handler_dict]:
                 for callback in event_handler_dict.get(event.type, tuple()):
                     callback(event)
@@ -558,6 +580,12 @@ class Window(object):
                             self.objects.focus_obj_on_side(side_dict[value])
         else:
             Focusable.set_mode(Focusable.MODE_MOUSE)
+
+    def map_cursor_position(self, mouse_pos: tuple[int, int]) -> tuple[int, int]:
+        screen = pygame.display.get_surface()
+        scale_width = Window.__fake_screen.get_width() / screen.get_width()
+        scale_height = Window.__fake_screen.get_height() / screen.get_height()
+        return mouse_pos[0] * scale_width, mouse_pos[1] * scale_height
 
     def after(self, milliseconds: float, callback: Callable[..., Any], *args: Any, **kwargs: Any) -> WindowCallback:
         window_callback = WindowCallback(self, milliseconds, callback, args, kwargs)
@@ -792,7 +820,7 @@ class Window(object):
             raise TypeError("The class must be a subclass of ServerSocket")
         Window.__server_socket = ServerSocketHandler(*args, **kwargs)
 
-    surface = property(lambda self: pygame.display.get_surface())
+    surface = property(lambda self: Window.__fake_screen)
     rect = property(lambda self: self.surface.get_rect())
     left = property(lambda self: self.rect.left)
     right = property(lambda self: self.rect.right)
@@ -875,11 +903,16 @@ class MainWindow(Window):
                  action_after_loop: Optional[Callable[..., Any]] = None) -> int:
         self.__before_loop_callback = action_before_loop
         self.__after_loop_callback = action_after_loop
-        return super().mainloop(
-            transition=transition,
-            action_before_loop=self.__action_before_loop,
-            action_after_loop=self.__action_after_loop
-        )
+        try:
+            return super().mainloop(
+                transition=transition,
+                action_before_loop=self.__action_before_loop,
+                action_after_loop=self.__action_after_loop
+            )
+        except WindowExit as e:
+            if not self.main_window:
+                raise WindowExit from e
+        return 0
 
     def __action_before_loop(self) -> None:
         self.__save_config = self.__actual_config
@@ -928,7 +961,10 @@ class MainWindow(Window):
             config.write(file, space_around_delimiters=False)
 
     def __set_mode(self, size: tuple[int, int], flags: int) -> None:
+        if pygame.display.get_surface() is not None:
+            return
         if not isinstance(size, (list, tuple)) or len(size) != 2 or size[0] <= 0 or size[1] <= 0:
             size = (0, 0)
-        pygame.display.set_mode(size, flags)
+        surface = pygame.display.set_mode(size, flags)
+        Window._Window__fake_screen = surface.copy()
         pygame.event.clear()

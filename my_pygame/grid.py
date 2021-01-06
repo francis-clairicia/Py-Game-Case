@@ -28,7 +28,7 @@ class GridCell(Focusable, Drawable, draw_focus_outline=False):
     def get(self) -> Union[Drawable, Focusable, None]:
         return self.__drawable
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
+    def _after_drawing(self, surface: pygame.Surface) -> None:
         if isinstance(self.__drawable, Drawable):
             self.__drawable.draw(surface)
 
@@ -193,7 +193,7 @@ class Grid(Drawable, use_parent_theme=False):
 
     def __update_background(self, size: tuple[int, int]) -> None:
         self.image = create_surface(size)
-        self.fill(self.__bg_color)
+        self.image.fill(self.__bg_color)
 
     def __getitem__(self, cell: tuple[int, int]) -> Union[Drawable, Focusable]:
         return self.get_obj_in_cell(*cell)
@@ -208,7 +208,7 @@ class Grid(Drawable, use_parent_theme=False):
 
     def place(self, obj: Union[Drawable, Focusable], row: int, column: int, padx=0, pady=0, justify="center") -> None:
         self.__add_object(obj, row, column, padx, pady, justify)
-        self.__update_grid()
+        self.update_grid()
 
     def place_multiple(self, obj_dict: dict[tuple[int, int], Union[Drawable, Focusable, dict[str, Union[int, Drawable, Focusable]]]]) -> None:
         for (row, col), item in obj_dict.items():
@@ -216,7 +216,7 @@ class Grid(Drawable, use_parent_theme=False):
                 self.__add_object(row=row, column=col, **item)
             else:
                 self.__add_object(item, row, col)
-        self.__update_grid()
+        self.update_grid()
 
     def __add_object(self, obj: Union[Drawable, Focusable], row: int, column: int, padx=0, pady=0, justify="center") -> None:
         row = max(int(row), 0)
@@ -227,7 +227,7 @@ class Grid(Drawable, use_parent_theme=False):
             grid_row = self.rows[row] = GridRow(self.__master, row)
         grid_row.add(obj, column, padx, pady, justify)
 
-    def __update_grid(self) -> None:
+    def update_grid(self) -> None:
         self.__max_width_columns.clear()
         self.__max_height_rows.clear()
         if self.rows:
@@ -247,7 +247,10 @@ class Grid(Drawable, use_parent_theme=False):
         else:
             self.image = create_surface((0, 0))
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
+    # def _before_drawing(self, surface: pygame.Surface) -> None:
+    #     self.update_grid()
+
+    def _after_drawing(self, surface: pygame.Surface) -> None:
         for row in self.rows.values():
             row.draw(surface)
 

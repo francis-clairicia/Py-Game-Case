@@ -36,6 +36,7 @@ _DEFAULT_THEME = dict()
 _HIDDEN_DEFAULT_THEME = dict()
 _CLASSES_NOT_USING_PARENT_THEMES = list()
 _CLASSES_NOT_USING_PARENT_DEFAULT_THEMES = list()
+_THEME_OPTIONS = "__used_theme__"
 
 class MetaThemedObject(type):
 
@@ -51,9 +52,11 @@ class MetaThemedObject(type):
         elif isinstance(theme, str):
             theme = [theme]
         theme_kwargs = cls.get_theme_options(*default_theme, *theme)
-        return type.__call__(cls, *args, **(theme_kwargs | kwargs))
+        obj = type.__call__(cls, *args, **(theme_kwargs | kwargs))
+        setattr(obj, _THEME_OPTIONS, theme_kwargs)
+        return obj
 
-class ThemedObject(object, metaclass=MetaThemedObject):
+class ThemedObject(metaclass=MetaThemedObject):
 
     def __init_subclass__(cls, use_parent_theme=True, use_parent_default_theme=True, **kwargs) -> None:
         super().__init_subclass__(**kwargs)
@@ -62,6 +65,9 @@ class ThemedObject(object, metaclass=MetaThemedObject):
             use_parent_default_theme = False
         if not use_parent_default_theme:
             _CLASSES_NOT_USING_PARENT_DEFAULT_THEMES.append(cls)
+
+    def get_used_theme_options(self) -> dict[str, Any]:
+        return getattr(self, _THEME_OPTIONS, dict())
 
     @classmethod
     def set_theme(cls, name: str, options: dict[str, Any]) -> None:

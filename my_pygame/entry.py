@@ -42,8 +42,8 @@ class Entry(Clickable, RectangleShape):
     def __edit(self) -> bool:
         return self.master.text_input_enabled() and self.has_focus()
 
-    def after_drawing(self, surface: pygame.Surface) -> None:
-        RectangleShape.after_drawing(self, surface)
+    def _after_drawing(self, surface: pygame.Surface) -> None:
+        RectangleShape._after_drawing(self, surface)
         self.__text.move(left=self.left + 10, centery=self.centery)
         self.__text.draw(surface)
         if self.__edit() and self.__cursor_animated:
