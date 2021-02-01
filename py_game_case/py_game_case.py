@@ -112,7 +112,7 @@ class SideBoard(Dialog):
 
     def __init__(self, master):
         super().__init__(master, width_ratio=0.25, height_ratio=1, outline=1, outline_color=WHITE, bg_color=BLUE, bind_escape=False)
-        self.bind_key(pygame.K_ESCAPE, lambda event: self.animate_quit())
+        self.bind_key(pygame.K_ESCAPE, lambda event: self.stop())
         self.bind_event(pygame.MOUSEBUTTONDOWN, self.__handle_mouse_event)
 
         self.master = master
@@ -136,17 +136,16 @@ class SideBoard(Dialog):
         self.master.image_game_preview.animate_move(self, speed=75, right=self.left)
         self.frame.animate_move(self, speed=50, at_every_frame=self.place_objects, right=self.right)
 
-    def animate_quit(self) -> None:
+    def on_quit(self) -> None:
         self.frame.animate_move(self, speed=50, at_every_frame=self.place_objects, left=self.right)
-        self.stop()
 
     def __call(self, callback: Callable[..., None]):
-        self.animate_quit()
+        self.stop()
         callback()
 
     def __handle_mouse_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not self.frame.rect.collidepoint(*event.pos):
-            self.animate_quit()
+            self.stop()
 
 class PyGameCase(MainWindow):
 

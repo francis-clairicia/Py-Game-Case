@@ -16,7 +16,7 @@ class Section(Dialog):
         self.master = master
         self.gameplay = gameplay
         arrow = pygame.transform.flip(RESOURCES.IMG["arrow"], True, False)
-        self.button_back = ImageButton(self, img=arrow, width=50, callback=self.animate_stop, active_offset=(0, 5), highlight_color=YELLOW)
+        self.button_back = ImageButton(self, img=arrow, width=50, callback=self.stop, active_offset=(0, 5), highlight_color=YELLOW)
         self.title = Text(title)
 
     def place_objects(self) -> None:
@@ -28,9 +28,8 @@ class Section(Dialog):
         self.frame.move(right=0, top=self.master.buttons.top)
         self.frame.animate_move(self, speed=50, at_every_frame=self.place_objects, left=10, top=self.frame.top)
 
-    def animate_stop(self) -> None:
+    def on_quit(self) -> None:
         self.frame.animate_move(self, speed=50, at_every_frame=self.place_objects, right=0, top=self.frame.top)
-        self.stop()
 
 class AILevelSelectorSection(Section):
 

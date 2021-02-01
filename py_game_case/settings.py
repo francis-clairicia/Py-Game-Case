@@ -44,7 +44,7 @@ class UpdaterWindow(Dialog):
             font=("calibri", 30), color=WHITE, justify=Text.T_CENTER
         )
         self.__button_yes = Button(self, "Yes", theme="dialog", callback=self.__start_install)
-        self.__button_no = Button(self, "No", theme="dialog", callback=self.animate_stop)
+        self.__button_no = Button(self, "No", theme="dialog", callback=self.stop)
 
         self.__progress_bar = ProgressBar(0.5 * self.frame.w, 40, TRANSPARENT, GREEN)
         self.__progress_bar.config_label_text(font=("calibri", 25), color=WHITE)
@@ -66,9 +66,8 @@ class UpdaterWindow(Dialog):
         self.__button_yes.set_obj_on_side(on_left=self.__button_quit, on_right=self.__button_no, on_top=self.__button_quit)
         self.__button_no.set_obj_on_side(on_left=self.__button_yes, on_top=self.__button_quit)
 
-    def animate_stop(self) -> None:
+    def on_quit(self) -> None:
         self.frame.animate_move(self, speed=20, at_every_frame=self.place_objects, midtop=self.midbottom)
-        self.stop()
 
     def stop(self, force=False, sound=None) -> None:
         if not self.__process_started:
@@ -109,7 +108,7 @@ class SettingsWindow(Dialog):
 
     def __init__(self, master: Window):
         super().__init__(master, width_ratio=1, height_ratio=1, outline=0, bg_color=master.bg_color, bind_escape=False)
-        self.bind_key(pygame.K_ESCAPE, lambda event: self.animate_quit())
+        self.bind_key(pygame.K_ESCAPE, lambda event: self.stop())
 
         self.text_title = Text("Settings", font=("calibri", 100), color=WHITE)
         self.text_quit = Text("Escape: Exit settings", font=("calibri", 20), color=WHITE)
@@ -122,6 +121,5 @@ class SettingsWindow(Dialog):
         self.frame.left = self.right
         self.frame.animate_move(self, speed=50, at_every_frame=self.place_objects, center=self.center)
 
-    def animate_quit(self) -> None:
+    def on_quit(self) -> None:
         self.frame.animate_move(self, speed=50, at_every_frame=self.place_objects, left=self.right)
-        self.stop()

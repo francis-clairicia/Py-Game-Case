@@ -388,6 +388,8 @@ class AnimationScaleHeight(AnimationScaleSize):
 
 class Animation:
 
+    __enabled = True
+
     def __init__(self, drawable: Drawable):
         self.__drawable = drawable
         self.__animations_order = ["scale_width", "scale_height", "rotate", "move"]
@@ -449,6 +451,8 @@ class Animation:
         default_pos = self.__drawable.get_move()
         only_move = self.__only_move_animation()
         while any(animation.started() for animation in self.__iter_animations()):
+            if not self.is_enabled():
+                return
             master.handle_fps()
             self.__animate(at_every_frame)
             master.draw_and_refresh(pump=True)
@@ -467,6 +471,8 @@ class Animation:
 
     def __start_window_callback(self, master, at_every_frame: Optional[Callable[..., Any]], after_animation: Optional[Callable[..., Any]],
                                 default_image: pygame.Surface, default_pos: dict[str, Any], only_move: bool) -> None:
+        if not self.is_enabled():
+            return
         if not only_move:
             self.__drawable.image = default_image
         if self.animation_set("move"):
@@ -496,3 +502,15 @@ class Animation:
         if self.__window_callback is None and self.__save_window_callback is not None:
             self.__animations = self.__save_animations.copy()
             self.__save_window_callback()
+
+    @staticmethod
+    def enable() -> bool:
+        Animation.__enabled = True
+
+    @staticmethod
+    def disable() -> bool:
+        Animation.__enabled = False
+
+    @staticmethod
+    def is_enabled() -> bool:
+        return Animation.__enabled

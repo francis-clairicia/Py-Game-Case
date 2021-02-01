@@ -354,8 +354,8 @@ class FourInARowGameplay(Window):
         self.grid.play(self.player_turn, column)
         line = self.check_victory()
         if line:
-            for column in self.grid.columns:
-                column.disable()
+            for c in self.grid.columns:
+                c.disable()
             self.left_options[0].focus_set()
             self.update_winner()
             self.highlight_line(line)
@@ -364,6 +364,10 @@ class FourInARowGameplay(Window):
             self.text_drawn_match.show()
         else:
             self.player_turn = (self.player_turn % 2) + 1
+            if self.enemy == LOCAL_PLAYER:
+                self.draw_and_refresh()
+                pygame.time.wait(500)
+        self.clear_all_events()
         self.allow_all_events()
 
     def check_victory(self) -> list[tuple[int, int]]:

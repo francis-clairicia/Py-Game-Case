@@ -6,7 +6,7 @@ import configparser
 from typing import Callable, Any, Union, Optional, Sequence
 from contextlib import contextmanager
 import pygame
-from .drawable import Drawable
+from .drawable import Drawable, Animation
 from .focusable import Focusable
 from .text import Text
 from .list import DrawableList
@@ -321,6 +321,7 @@ class Window:
                  action_before_loop: Optional[Callable[..., Any]] = None,
                  action_after_loop: Optional[Callable[..., Any]] = None) -> int:
         self.__loop = True
+        Animation.enable()
         if not isinstance(Window.__main_window, Window):
             Window.__main_window = self
         Window.__all_opened.append(self)
@@ -367,6 +368,8 @@ class Window:
         self.__loop = False
         if sound:
             self.play_sound(sound)
+        if force or self.main_window:
+            Animation.disable()
         self.on_quit()
         self.set_focus(None)
         Window.__all_opened.remove(self)
@@ -537,6 +540,10 @@ class Window:
     @staticmethod
     def allow_all_events() -> None:
         pygame.event.set_allowed(None)
+
+    @staticmethod
+    def clear_all_events() -> None:
+        pygame.event.clear()
 
     @staticmethod
     def block_only_event(event_type: Union[int, Sequence[int]]) -> None:
