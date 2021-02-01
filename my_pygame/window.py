@@ -1,11 +1,14 @@
 # -*- coding: Utf-8 -*
+# pylint: disable=too-many-lines
 
 import os
 import sys
 import configparser
 from typing import Callable, Any, Union, Optional, Sequence
 from contextlib import contextmanager
+from functools import wraps
 import pygame
+from .theme import ThemeNamespace
 from .drawable import Drawable, Animation
 from .focusable import Focusable
 from .text import Text
@@ -154,7 +157,29 @@ class WindowTransition:
     def show_previous_window_end_loop(self, window) -> None:
         pass
 
-class Window:
+class MetaWindow(type):
+
+    def __init__(cls, name, bases, dict_) -> None:
+        type.__init__(cls, name, bases, dict_)
+        MetaWindow.set_namespace_decorator(cls)
+
+    def set_namespace_decorator(cls):
+        for name, obj in vars(cls).items():
+            if callable(obj) and name not in ["__new__", "__init__", "__getattr__", "__setattr__", "get_namespace"]:
+                setattr(cls, name, MetaWindow.namespace_decorator(obj))
+
+    @staticmethod
+    def namespace_decorator(func):
+
+        @wraps(func)
+        def wrapper(window, *args, **kwargs):
+            with ThemeNamespace(window.get_namespace()):
+                output = func(window, *args, **kwargs)
+            return output
+
+        return wrapper
+
+class Window(metaclass=MetaWindow):
 
     MIXER_FREQUENCY = 44100
     MIXER_SIZE = -16
@@ -189,6 +214,12 @@ class Window:
     __all_window_key_enabled = True
     __server_socket = ServerSocket()
     __client_socket = ClientSocket()
+
+    def __new__(cls, *args, **kwargs):
+        # pylint: disable=unused-argument
+        obj = super().__new__(cls)
+        setattr(obj, "__namespace", ThemeNamespace.get())
+        return obj
 
     def __init__(self, master=None, bg_color=BLACK, bg_music=None):
         self.__master = master
@@ -231,6 +262,9 @@ class Window:
     @staticmethod
     def get_actual_window():
         return Window.__actual_looping_window
+
+    def get_namespace(self) -> Any:
+        return getattr(self, "__namespace")
 
     @property
     def joystick(self) -> JoystickList:
@@ -368,7 +402,7 @@ class Window:
         self.__loop = False
         if sound:
             self.play_sound(sound)
-        if force or self.main_window:
+        if force or self.main_window or self.__actual_looping_window is not self:
             Animation.disable()
         self.on_quit()
         self.set_focus(None)
@@ -377,7 +411,9 @@ class Window:
             Window.__main_window.stop()
         elif self.main_window:
             for window in list(Window.__all_opened):
+                Animation.disable()
                 window.stop()
+        Animation.enable()
         if not Window.__all_opened and pygame.get_init():
             Window.stop_connection()
             pygame.quit()
@@ -919,6 +955,7 @@ class MainWindow(Window):
         except WindowExit as e:
             if not self.main_window:
                 raise WindowExit from e
+            self.save_config()
         return 0
 
     def __action_before_loop(self) -> None:

@@ -132,6 +132,7 @@ class LANPlayingP1(Section):
         self.stop_server()
 
     def on_quit(self) -> None:
+        super().on_quit()
         self.stop_connection()
 
     def set_grid(self) -> None:
@@ -190,6 +191,7 @@ class LANPlayingP2(Section):
         self.text_game_status.hide()
 
     def on_quit(self) -> None:
+        super().on_quit()
         self.stop_connection()
 
     def set_grid(self) -> None:

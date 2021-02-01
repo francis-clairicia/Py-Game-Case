@@ -2,7 +2,7 @@
 
 import pygame
 from .text import Text
-from .shape import RectangleShape, PolygonShape
+from .shape import RectangleShape
 from .clickable import Clickable
 from .window import Window
 from .clock import Clock
@@ -22,12 +22,15 @@ class Entry(Clickable, RectangleShape):
         )
         self.__nb_chars = max(int(width), 1)
         width, height = self.__text.font.size("W" * self.__nb_chars)
-        RectangleShape.__init__(self, width + 15, height + 10, bg, **kwargs)
+        self.__cursor_width_offset = 15
+        self.__cursor_height_offset = 10
+        width += self.__cursor_width_offset
+        height += self.__cursor_height_offset
+        RectangleShape.__init__(self, width, height, bg, **kwargs)
         Clickable.__init__(
             self, master, callback=self.start_edit, state=state, highlight_color=highlight_color, highlight_thickness=highlight_thickness,
             hover_sound=hover_sound, on_click_sound=on_click_sound, disabled_sound=disabled_sound, cursor=Cursor(pygame.SYSTEM_CURSOR_IBEAM)
         )
-        self.__cursor_line = PolygonShape(fg, outline=2, points=[(0, 0), (0, height)])
         self.__cursor = 0
         self.__show_cursor = False
         self.__cursor_animated = False
@@ -53,9 +56,16 @@ class Entry(Clickable, RectangleShape):
             self.__show_cursor = False
         if self.__show_cursor:
             width = self.__text.font.size(self.__text.message[:self.cursor])[0] + 1
-            self.__cursor_line.outline_color = self.__text.color
-            self.__cursor_line.move(left=self.__text.left + width, centery=self.centery)
-            self.__cursor_line.draw(surface)
+            height = self.height - self.__cursor_height_offset
+            cursor_start = (
+                self.__text.left + width,
+                self.__text.centery - height // 2
+            )
+            cursor_end = (
+                self.__text.left + width,
+                self.__text.centery + height // 2
+            )
+            pygame.draw.line(surface, self.__text.color, cursor_start, cursor_end, width=2)
 
     @property
     def cursor(self) -> int:

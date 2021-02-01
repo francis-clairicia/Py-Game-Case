@@ -229,7 +229,7 @@ class FourInARowGameplay(Window):
                 self.ai.level = ai_level
         for row, name in enumerate(self.__turn_dict.values()):
             self.token_players.place(
-                Text(name + ":", **self.text_winner.get_used_theme_options()),
+                Text(name + ":"),
                 row, column=0, padx=5, pady=5, justify="right"
             )
         self.mainloop()
