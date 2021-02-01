@@ -159,21 +159,29 @@ class WindowTransition:
 
 class MetaWindow(type):
 
+    __namespaces = dict()
+
     def __init__(cls, name, bases, dict_) -> None:
         type.__init__(cls, name, bases, dict_)
         MetaWindow.set_namespace_decorator(cls)
 
+    def __call__(cls, *args, **kwargs):
+        obj = type.__call__(cls, *args, **kwargs)
+        MetaWindow.__namespaces[obj] = ThemeNamespace.get()
+        return obj
+
     def set_namespace_decorator(cls):
-        for name, obj in vars(cls).items():
-            if callable(obj) and name not in ["__new__", "__init__", "__getattr__", "__setattr__", "get_namespace"]:
-                setattr(cls, name, MetaWindow.namespace_decorator(obj))
+        for name, obj in filter(lambda item: callable(item[1]), vars(cls).items()):
+            setattr(cls, name, MetaWindow.namespace_decorator(obj))
 
     @staticmethod
     def namespace_decorator(func):
 
         @wraps(func)
         def wrapper(window, *args, **kwargs):
-            with ThemeNamespace(window.get_namespace()):
+            if window not in MetaWindow.__namespaces:
+                return func(window, *args, **kwargs)
+            with ThemeNamespace(MetaWindow.__namespaces[window]):
                 output = func(window, *args, **kwargs)
             return output
 
@@ -214,12 +222,6 @@ class Window(metaclass=MetaWindow):
     __all_window_key_enabled = True
     __server_socket = ServerSocket()
     __client_socket = ClientSocket()
-
-    def __new__(cls, *args, **kwargs):
-        # pylint: disable=unused-argument
-        obj = super().__new__(cls)
-        setattr(obj, "__namespace", ThemeNamespace.get())
-        return obj
 
     def __init__(self, master=None, bg_color=BLACK, bg_music=None):
         self.__master = master
@@ -262,9 +264,6 @@ class Window(metaclass=MetaWindow):
     @staticmethod
     def get_actual_window():
         return Window.__actual_looping_window
-
-    def get_namespace(self) -> Any:
-        return getattr(self, "__namespace")
 
     @property
     def joystick(self) -> JoystickList:

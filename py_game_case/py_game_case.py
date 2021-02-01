@@ -10,7 +10,7 @@ from my_pygame import Image, Text, ProgressBar, Button, Sprite, RectangleShape, 
 from my_pygame import ButtonListVertical, DrawableListHorizontal, SpriteDict
 from my_pygame import TRANSPARENT, WHITE, BLACK, YELLOW, GREEN, BLUE
 from my_pygame import set_color_alpha, change_brightness
-from my_pygame import ThemeNamespace, threaded_function
+from my_pygame import ThemeNamespace
 from .constants import RESOURCES, GAMES, SETTINGS
 from .settings import SettingsWindow, UpdaterWindow
 from .updater import Updater
@@ -231,16 +231,6 @@ class PyGameCase(MainWindow):
         self.button_settings.set_obj_on_side(on_bottom=self.buttons_game_launch[0], on_left=self.buttons_game_launch[0])
         self.buttons_game_launch.set_obj_on_side(on_top=self.button_settings, on_right=self.button_settings)
 
-    @threaded_function
-    def __init_games(self) -> None:
-        try:
-            for game_id, game_infos in filter(lambda item: item[0] not in self.window_game_dict, GAMES.items()):
-                with ThemeNamespace(game_id):
-                    self.window_game_dict[game_id] = game_infos["window"]()
-        except:
-            sys.excepthook(*sys.exc_info())
-            self.stop(force=True)
-
     def on_start_loop(self):
         self.image_game_preview.move(right=self.left, top=self.top)
         save_objects_center = list()
@@ -266,11 +256,15 @@ class PyGameCase(MainWindow):
         self.objects.add(loading)
         self.objects.set_priority(loading, 0, relative_to=self.logo)
         loading.animate_move(self, speed=10, centerx=loading.centerx, top=self.logo.bottom + 20)
-        thread = self.__init_games()
-        while thread.is_alive() or loading.percent < 1:
-            self.handle_fps()
-            loading.value = len(self.window_game_dict)
-            self.draw_and_refresh(pump=True)
+        try:
+            for game_id, game_infos in filter(lambda item: item[0] not in self.window_game_dict, GAMES.items()):
+                with ThemeNamespace(game_id):
+                    self.window_game_dict[game_id] = game_infos["window"]()
+                    loading.value = len(self.window_game_dict)
+                    self.draw_and_refresh(pump=True)
+        except:
+            sys.excepthook(*sys.exc_info())
+            self.stop(force=True)
         pygame.time.wait(100)
         loading.animate_move(self, speed=10, center=self.logo.center)
         self.objects.remove(loading)
