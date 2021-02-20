@@ -55,8 +55,8 @@ class MetaThemedObject(type):
 
 class ThemedObject(metaclass=MetaThemedObject):
 
-    def __init_subclass__(cls, use_parent_theme=True, use_parent_default_theme=True, **kwargs) -> None:
-        super().__init_subclass__(**kwargs)
+    def __init_subclass__(cls, use_parent_theme=True, use_parent_default_theme=True) -> None:
+        super().__init_subclass__()
         if not use_parent_theme:
             _CLASSES_NOT_USING_PARENT_THEMES.append(cls)
             use_parent_default_theme = False
